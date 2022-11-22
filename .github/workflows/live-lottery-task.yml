@@ -57,13 +57,12 @@ env:
   Ray_Serilog__WriteTo__0__Args__outputTemplate: ${{secrets.CONSOLELOGTEMPLATE}} 
 
 jobs:
-  run-live-lottery:
-    runs-on: ubuntu-latest
-    needs: pre-check
-    # if: env.IsOpenLiveLotteryTask=='true' # 这里job.if读取不到env或secrets，很坑...但是发现可以读到needs的outputs值
-    if: needs.pre-check.outputs.result=='开启'
 
-    environment: LiveLottery
+  run-daily-task:
+
+    runs-on: ubuntu-latest
+
+    environment: Production
 
     steps:
 
