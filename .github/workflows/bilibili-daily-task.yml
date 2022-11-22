@@ -58,17 +58,6 @@ env:
   Ray_Serilog__WriteTo__0__Args__restrictedToMinimumLevel: ${{secrets.CONSOLELOGLEVEL}}
   Ray_Serilog__WriteTo__0__Args__outputTemplate: ${{secrets.CONSOLELOGTEMPLATE}}         
 
-jobs:
-
-  pre-check:
-    runs-on: ubuntu-latest
-    outputs:
-      result: ${{ steps.check.outputs.result }} # 不能直接传递secrets的值，否则会被skip，需要转一下
-    steps:
-    - id: check
-      if: env.IsOpenDailyTask=='true'
-      run: 
-
   run-daily-task:
 
     runs-on: ubuntu-latest
