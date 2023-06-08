@@ -7,75 +7,33 @@
 <!-- TOC depthFrom:2 -->
 
 - [1. 步骤](#1-步骤)
-    - [1.1. 安装 `dotnet` 环境](#11-安装-dotnet-环境)
-    - [1.2. 重启青龙容器](#12-重启青龙容器)
-    - [1.3. 登录青龙面板并修改配置](#13-登录青龙面板并修改配置)
-    - [1.4. 添加bili配置](#14-添加bili配置)
-    - [1.5. 在青龙面板中添加拉库定时任务](#15-在青龙面板中添加拉库定时任务)
-        - [1.5.1 订阅管理](#151-订阅管理)
-        - [1.5.2 定时任务拉库](#152-定时任务拉库)
+    - [1.1. 登录青龙面板并修改配置](#11-登录青龙面板并修改配置)
+    - [1.2. 在青龙面板中添加拉库定时任务](#12-在青龙面板中添加拉库定时任务)
+        - [1.2.1. 订阅管理](#121-订阅管理)
+        - [1.2.2. 定时任务拉库](#122-定时任务拉库)
+    - [1.3. 登录](#13-登录)
 - [2. 先行版](#2-先行版)
-    - [2.1 订阅管理](#21-订阅管理)
-    - [2.2 定时任务拉库](#22-定时任务拉库)
+    - [2.1. 订阅管理](#21-订阅管理)
+    - [2.2. 定时任务拉库](#22-定时任务拉库)
 - [3. GitHub加速](#3-github加速)
-- [4 常见问题](#4-常见问题)
-    - [4.1 Couldn't find a valid ICU package installed on the system](#41-couldnt-find-a-valid-icu-package-installed-on-the-system)
+- [4. 常见问题](#4-常见问题)
+    - [4.1. Couldn't find a valid ICU package installed on the system](#41-couldnt-find-a-valid-icu-package-installed-on-the-system)
 
 <!-- /TOC -->
 
 ## 1. 步骤
 
-### 1.1. 安装 `dotnet` 环境
-编辑青龙的 `extra.sh` 文件，添加如下指令：
-
-```
-# 安装 dotnet 环境
-curl -sSL https://ghproxy.com/https://raw.githubusercontent.com/RayWangQvQ/BiliBiliToolPro/main/qinglong/ray-dotnet-install.sh | bash /dev/stdin
-```
-
-![qinglong-extra.png](../docs/imgs/qinglong-extra.png)
-
-有人反馈国内服务器可能会出现下载缓慢的情况，如果下面一步运行时发现超时或异常，可以将上面指令改为：
-
-```
-curl -sSL https://ghproxy.com/https://raw.githubusercontent.com/RayWangQvQ/BiliBiliToolPro/main/qinglong/ray-dotnet-install.sh | bash /dev/stdin --no-official
-```
-
-`--no-official`表示不会使用官方脚本去安装，而是通过手动下载二进制文件的形式来安装。
-
-### 1.2. 重启青龙容器
-重启青龙容器，或在宿主机中执行 `docker exec -it qinglong bash /ql/data/config/extra.sh`，其中 `qinglong` 是你的容器名。
-
-### 1.3. 登录青龙面板并修改配置
+### 1.1. 登录青龙面板并修改配置
 青龙面板，`配置文件`页。
 
 修改 `RepoFileExtensions="js py"` 为 `RepoFileExtensions="js py sh"`
 
 保存配置。
 
-### 1.4. 添加bili配置
-
-青龙面板，`环境变量`页，添加环境变量：
-
-```
-名称：Ray_BiliBiliCookies__1
-值：abc
-```
-
-```
-名称：Ray_BiliBiliCookies__2
-值：defg
-```
-
-`abc`、`defg`为你抓取到的真实cookie字符串。
-
-![qinglong-env.png](../docs/imgs/qinglong-env.png)
-
-
-### 1.5. 在青龙面板中添加拉库定时任务
+### 1.2. 在青龙面板中添加拉库定时任务
 
 两种方式：
-#### 1.5.1 订阅管理
+#### 1.2.1. 订阅管理
 
 ```
 名称：Bilibili
@@ -91,7 +49,7 @@ curl -sSL https://ghproxy.com/https://raw.githubusercontent.com/RayWangQvQ/BiliB
 
 保存后，点击运行按钮，运行拉库。
 
-#### 1.5.2 定时任务拉库
+#### 1.2.2. 定时任务拉库
 青龙面板，`定时任务`页，右上角`添加任务`，填入以下信息：
 
 ```
@@ -108,6 +66,17 @@ curl -sSL https://ghproxy.com/https://raw.githubusercontent.com/RayWangQvQ/BiliB
 
 ![qinglong-tasks.png](../docs/imgs/qinglong-tasks.png)
 
+### 1.3. 登录
+
+在青龙定时任务中，点击运行`bili扫码登录`任务，查看运行日志，扫描日志中的二维码进行登录。
+![qinglong-login.png](../docs/imgs/qinglong-login.png)
+
+登录成功后，会将cookie保存到青龙的环境变量中：
+
+![qinglong-env.png](../docs/imgs/qinglong-env.png)
+
+首次运行会自动安装dotnet环境，时间久点，之后就不需要重复安装了。
+
 ## 2. 先行版
 
 青龙拉库时可以指定分支，develop分支的代码会超前于默认的main分支，包含当前正在开发的新功能。
@@ -116,7 +85,7 @@ curl -sSL https://ghproxy.com/https://raw.githubusercontent.com/RayWangQvQ/BiliB
 
 方式有两种：
 
-### 2.1 订阅管理
+### 2.1. 订阅管理
 
 ```
 分支：develop
@@ -125,16 +94,16 @@ curl -sSL https://ghproxy.com/https://raw.githubusercontent.com/RayWangQvQ/BiliB
 
 其他选项同上。
 
-### 2.2 定时任务拉库
+### 2.2. 定时任务拉库
 
 修改拉库命令为`ql repo https://github.com/RayWangQvQ/BiliBiliToolPro.git "bili_dev_task_" "" "" "develop"`
 
 ## 3. GitHub加速
 拉库时，如果服务器在国内，访问GitHub速度慢，可以在仓库地址前加上 `https://ghproxy.com/` 进行加速, 如：`ql repo https://ghproxy.com/https://github.com/RayWangQvQ/BiliBiliToolPro.git "bili_task_"`
 
-## 4 常见问题
+## 4. 常见问题
 
-### 4.1 Couldn't find a valid ICU package installed on the system
+### 4.1. Couldn't find a valid ICU package installed on the system
 
 如 #266 ，需要在青龙面板的环境变量添加如下环境变量：
 

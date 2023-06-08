@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
@@ -18,21 +18,25 @@ namespace Ray.BiliBiliTool.Console
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task<int> Main(string[] args)
         {
+            PrintLogo();
+
             IHost host = CreateHost(args);
 
             try
             {
-                host.Run();
+                await host.RunAsync();
+                return 0;
             }
             catch (Exception ex)
             {
                 Log.Fatal(ex, "Host terminated unexpectedly!");
+                return 1;
             }
             finally
             {
-                Log.CloseAndFlush();
+                await Log.CloseAndFlushAsync();
             }
         }
 
@@ -47,44 +51,57 @@ namespace Ray.BiliBiliTool.Console
 
         internal static IHostBuilder CreateHostBuilder(string[] args)
         {
+            //IHostBuilder hostBuilder = Host.CreateDefaultBuilder();
             IHostBuilder hostBuilder = new HostBuilder();
+
+            //hostBuilder.UseContentRoot(Directory.GetCurrentDirectory());
 
             //承载系统自身的配置：
             hostBuilder.ConfigureHostConfiguration(hostConfigurationBuilder =>
             {
-                Environment.SetEnvironmentVariable(HostDefaults.EnvironmentKey, Environment.GetEnvironmentVariable(Global.EnvironmentKey));
-                hostConfigurationBuilder.AddEnvironmentVariables();
+                hostConfigurationBuilder.AddEnvironmentVariables(prefix: "DOTNET_");
+
+                if (args is { Length: > 0 })
+                {
+                    hostConfigurationBuilder.AddCommandLine(args);
+                }
             });
 
             //应用配置:
             hostBuilder.ConfigureAppConfiguration((hostBuilderContext, configurationBuilder) =>
             {
                 Global.HostingEnvironment = hostBuilderContext.HostingEnvironment;
+                IHostEnvironment env = hostBuilderContext.HostingEnvironment;
 
                 //json文件：
-                configurationBuilder.AddJsonFile("appsettings.json", false, true)
+                configurationBuilder.AddJsonFile("appsettings.json", true, true)
                     .AddJsonFile($"appsettings.{hostBuilderContext.HostingEnvironment.EnvironmentName}.json", true, true)
-                    .AddJsonFile("exp.json", false, true)
-                    .AddJsonFile("donateCoinCanContinueStatus.json", false, true);
+                    ;
 
                 //用户机密：
-                if (hostBuilderContext.HostingEnvironment.IsDevelopment())
+                if (env.IsDevelopment() && env.ApplicationName?.Length > 0)
                 {
-                    //Assembly assembly = Assembly.Load(new AssemblyName(hostBuilderContext.HostingEnvironment.ApplicationName));
-                    Assembly assembly = typeof(Program).Assembly;
-                    configurationBuilder.AddUserSecrets(assembly, true);
+                    //var appAssembly = Assembly.Load(new AssemblyName(env.ApplicationName));
+                    var appAssembly = Assembly.GetAssembly(typeof(Program));
+                    configurationBuilder.AddUserSecrets(appAssembly, optional: true, reloadOnChange: true);
                 }
 
                 //环境变量：
+                configurationBuilder.AddExcludeEmptyEnvironmentVariables("QL_", false);
                 configurationBuilder.AddExcludeEmptyEnvironmentVariables("Ray_");
 
                 //命令行：
                 if (args != null && args.Length > 0)
                 {
-                    configurationBuilder.AddCommandLine(args, hostBuilderContext.Configuration
-                        .GetSection("CommandLineMappings")
-                        .Get<Dictionary<string, string>>());
+                    configurationBuilder.AddCommandLine(args, Config.Constants.GetCommandLineMappingsDic());
                 }
+
+                //本地cookie存储文件
+                configurationBuilder.AddJsonFile("cookies.json", true, true);
+
+                //内置配置
+                configurationBuilder.AddInMemoryCollection(Config.Constants.GetExpDic());
+                configurationBuilder.AddInMemoryCollection(Config.Constants.GetDonateCoinCanContinueStatusDic());
             });
 
             //日志:
@@ -110,6 +127,17 @@ namespace Ray.BiliBiliTool.Console
             });
 
             return hostBuilder;
+        }
+
+        private static void PrintLogo()
+        {
+            System.Console.WriteLine(@"  ____               ____    _   _____           _  ");
+            System.Console.WriteLine(@" |  _ \ __ _ _   _  | __ ) _| |_|_   _|__   ___ | | ");
+            System.Console.WriteLine(@" | |_) / _` | | | | |  _ \(_) (_) | |/ _ \ / _ \| | ");
+            System.Console.WriteLine(@" |  _ < (_| | |_| | | |_) | | | | | | (_) | (_) | | ");
+            System.Console.WriteLine(@" |_| \_\__,_|\__, | |____/|_|_|_| |_|\___/ \___/|_| ");
+            System.Console.WriteLine(@"             |___/                                  ");
+            System.Console.WriteLine();
         }
     }
 }

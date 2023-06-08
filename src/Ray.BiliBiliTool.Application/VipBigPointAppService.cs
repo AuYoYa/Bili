@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -33,9 +34,9 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("大会员大积分", TaskLevel.One)]
-        public override void DoTask()
+        public override async Task DoTaskAsync(CancellationToken cancellationToken)
         {
-            var ui = GetUserInfo();
+            var ui = await GetUserInfo();
 
             if (ui.GetVipType() == VipType.None)
             {
@@ -43,55 +44,55 @@ namespace Ray.BiliBiliTool.Application
                 return;
             }
 
-            var re = _vipApi.GetTaskList().Result;
+            var re = await _vipApi.GetTaskList();
 
-            if (re.Code != 0) throw new Exception(re.ToJson());
+            if (re.Code != 0) throw new Exception(re.ToJsonStr());
 
             VipTaskInfo taskInfo = re.Data;
             taskInfo.LogInfo(_logger);
 
             //签到
-            taskInfo = Sign(taskInfo);
+            taskInfo = await Sign(taskInfo);
 
             //福利任务
-            taskInfo = Bonus(taskInfo);
+            taskInfo = await Bonus(taskInfo);
 
             //体验任务
-            taskInfo = Privilege(taskInfo);
+            taskInfo = await Privilege(taskInfo);
 
             //日常任务
 
             //浏览追番频道页10秒
-            taskInfo = ViewAnimate(taskInfo);
+            taskInfo = await ViewAnimate(taskInfo);
 
             //浏览影视频道页10秒
-            taskInfo = ViewFilmChannel(taskInfo);
+            taskInfo = await ViewFilmChannel(taskInfo);
 
             //浏览会员购页面10秒
             taskInfo = ViewVipMall(taskInfo);
 
             //观看任意正片内容
-            taskInfo = ViewVideo(taskInfo);
+            taskInfo = await ViewVideo(taskInfo);
 
             //领取购买任务
-            taskInfo = BuyVipVideo(taskInfo);
-            taskInfo = BuyVipProduct(taskInfo);
-            taskInfo = BuyVipMall(taskInfo);
+            taskInfo = await BuyVipVideo(taskInfo);
+            taskInfo = await BuyVipProduct(taskInfo);
+            taskInfo = await BuyVipMall(taskInfo);
 
             taskInfo.LogInfo(_logger);
         }
 
         [TaskInterceptor("测试Cookie")]
-        private UserInfo GetUserInfo()
+        private async Task<UserInfo> GetUserInfo()
         {
-            UserInfo userInfo = _loginDomainService.LoginByCookie();
+            UserInfo userInfo = await _loginDomainService.LoginByCookie();
             if (userInfo == null) throw new Exception("登录失败，请检查Cookie");//终止流程
 
             return userInfo;
         }
 
         [TaskInterceptor("签到", TaskLevel.Two, false)]
-        private VipTaskInfo Sign(VipTaskInfo info)
+        private async Task<VipTaskInfo> Sign(VipTaskInfo info)
         {
             if (info.Task_info.Sing_task_item.IsTodaySigned)
             {
@@ -101,12 +102,12 @@ namespace Ray.BiliBiliTool.Application
                 return info;
             }
 
-            var re = _vipApi.Sign(new SignRequest()).Result;
-            if (re.Code != 0) throw new Exception(re.ToJson());
+            var re = await _vipApi.Sign(new SignRequest());
+            if (re.Code != 0) throw new Exception(re.ToJsonStr());
 
             //确认
-            var infoResult = _vipApi.GetTaskList().Result;
-            if (infoResult.Code != 0) throw new Exception(infoResult.ToJson());
+            var infoResult = await _vipApi.GetTaskList();
+            if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
             info = infoResult.Data;
 
             _logger.LogInformation("今日可获得签到积分：{score}", info.Task_info.Sing_task_item.TodayHistory?.Score);
@@ -117,7 +118,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("福利任务", TaskLevel.Two, false)]
-        private VipTaskInfo Bonus(VipTaskInfo info)
+        private async Task<VipTaskInfo> Bonus(VipTaskInfo info)
         {
             var bonusTask = GetTarget(info);
 
@@ -132,17 +133,17 @@ namespace Ray.BiliBiliTool.Application
             if (bonusTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(bonusTask.task_code);
+                await TryReceive(bonusTask.task_code);
             }
 
             _logger.LogInformation("开始完成任务");
-            var re = Complete(bonusTask.task_code);
+            var re = await Complete(bonusTask.task_code);
 
             //确认
             if (re)
             {
-                var infoResult = _vipApi.GetTaskList().Result;
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJson());
+                var infoResult = await _vipApi.GetTaskList();
+                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
                 info = infoResult.Data;
                 bonusTask = GetTarget(info);
 
@@ -160,7 +161,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("体验任务", TaskLevel.Two, false)]
-        private VipTaskInfo Privilege(VipTaskInfo info)
+        private async Task<VipTaskInfo> Privilege(VipTaskInfo info)
         {
             var privilegeTask = GetTarget(info);
 
@@ -175,17 +176,17 @@ namespace Ray.BiliBiliTool.Application
             if (privilegeTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(privilegeTask.task_code);
+                await TryReceive(privilegeTask.task_code);
             }
 
             _logger.LogInformation("开始完成任务");
-            var re = Complete(privilegeTask.task_code);
+            var re = await Complete(privilegeTask.task_code);
 
             //确认
             if (re)
             {
-                var infoResult = _vipApi.GetTaskList().Result;
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJson());
+                var infoResult = await _vipApi.GetTaskList();
+                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
                 info = infoResult.Data;
                 privilegeTask = GetTarget(info);
 
@@ -203,7 +204,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("浏览追番频道页10秒", TaskLevel.Two, false)]
-        private VipTaskInfo ViewAnimate(VipTaskInfo info)
+        private async Task<VipTaskInfo> ViewAnimate(VipTaskInfo info)
         {
             var code = "jp_channel";
 
@@ -220,17 +221,17 @@ namespace Ray.BiliBiliTool.Application
             if (targetTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(targetTask.task_code);
+                await TryReceive(targetTask.task_code);
             }
 
             _logger.LogInformation("开始完成任务");
-            var re = CompleteView(code);
+            var re = await CompleteView(code);
 
             //确认
             if (re)
             {
-                var infoResult = _vipApi.GetTaskList().Result;
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJson());
+                var infoResult = await _vipApi.GetTaskList();
+                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
                 info = infoResult.Data;
                 targetTask = GetTarget(info);
 
@@ -248,7 +249,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("浏览影视频道页10秒", TaskLevel.Two, false)]
-        private VipTaskInfo ViewFilmChannel(VipTaskInfo info)
+        private async Task<VipTaskInfo> ViewFilmChannel(VipTaskInfo info)
         {
             var code = "tv_channel";
 
@@ -265,17 +266,17 @@ namespace Ray.BiliBiliTool.Application
             if (targetTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(targetTask.task_code);
+                await TryReceive(targetTask.task_code);
             }
 
             _logger.LogInformation("开始完成任务");
-            var re = CompleteView(code);
+            var re = await CompleteView(code);
 
             //确认
             if (re)
             {
-                var infoResult = _vipApi.GetTaskList().Result;
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJson());
+                var infoResult = await _vipApi.GetTaskList();
+                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
                 info = infoResult.Data;
                 targetTask = GetTarget(info);
 
@@ -301,7 +302,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("观看任意正片内容", TaskLevel.Two, false)]
-        private VipTaskInfo ViewVideo(VipTaskInfo info)
+        private async Task<VipTaskInfo> ViewVideo(VipTaskInfo info)
         {
             CommonTaskItem targetTask = GetTarget(info);
 
@@ -316,7 +317,7 @@ namespace Ray.BiliBiliTool.Application
             if (targetTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(targetTask.task_code);
+                await TryReceive(targetTask.task_code);
             }
 
             _logger.LogInformation("开始完成任务");
@@ -333,7 +334,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("购买单点付费影片（仅领取）", TaskLevel.Two, false)]
-        private VipTaskInfo BuyVipVideo(VipTaskInfo info)
+        private async Task<VipTaskInfo> BuyVipVideo(VipTaskInfo info)
         {
             CommonTaskItem targetTask = GetTarget(info);
 
@@ -348,7 +349,7 @@ namespace Ray.BiliBiliTool.Application
             if (targetTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(targetTask.task_code);
+                await TryReceive(targetTask.task_code);
             }
 
             return info;
@@ -362,7 +363,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("购买指定大会员产品（仅领取）", TaskLevel.Two, false)]
-        private VipTaskInfo BuyVipProduct(VipTaskInfo info)
+        private async Task<VipTaskInfo> BuyVipProduct(VipTaskInfo info)
         {
             CommonTaskItem targetTask = GetTarget(info);
 
@@ -377,7 +378,7 @@ namespace Ray.BiliBiliTool.Application
             if (targetTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(targetTask.task_code);
+                await TryReceive(targetTask.task_code);
             }
 
             return info;
@@ -391,7 +392,7 @@ namespace Ray.BiliBiliTool.Application
         }
 
         [TaskInterceptor("购买指定会员购商品（仅领取）", TaskLevel.Two, false)]
-        private VipTaskInfo BuyVipMall(VipTaskInfo info)
+        private async Task<VipTaskInfo> BuyVipMall(VipTaskInfo info)
         {
             CommonTaskItem targetTask = GetTarget(info);
 
@@ -406,7 +407,7 @@ namespace Ray.BiliBiliTool.Application
             if (targetTask.state == 0)
             {
                 _logger.LogInformation("开始领取任务");
-                TryReceive(targetTask.task_code);
+                await TryReceive(targetTask.task_code);
             }
 
             return info;
@@ -422,29 +423,29 @@ namespace Ray.BiliBiliTool.Application
         /// <summary>
         /// 领取任务
         /// </summary>
-        private void TryReceive(string taskCode)
+        private async Task TryReceive(string taskCode)
         {
             BiliApiResponse re = null;
             try
             {
                 var request = new ReceiveOrCompleteTaskRequest(taskCode);
-                re = _vipApi.Receive(request).Result;
+                re = await _vipApi.Receive(request);
                 if (re.Code == 0)
                     _logger.LogInformation("领取任务成功");
                 else
-                    _logger.LogInformation("领取任务失败：{msg}", re.ToJson());
+                    _logger.LogInformation("领取任务失败：{msg}", re.ToJsonStr());
             }
             catch (Exception e)
             {
                 _logger.LogError("领取任务异常");
-                _logger.LogError(e.Message + re?.ToJson());
+                _logger.LogError(e.Message + re?.ToJsonStr());
             }
         }
 
-        private bool Complete(string taskCode)
+        private async Task<bool> Complete(string taskCode)
         {
             var request = new ReceiveOrCompleteTaskRequest(taskCode);
-            var re = _vipApi.Complete(request).Result;
+            var re = await _vipApi.Complete(request);
             if (re.Code == 0)
             {
                 _logger.LogInformation("已完成");
@@ -453,18 +454,18 @@ namespace Ray.BiliBiliTool.Application
 
             else
             {
-                _logger.LogInformation("失败：{msg}", re.ToJson());
+                _logger.LogInformation("失败：{msg}", re.ToJsonStr());
                 return false;
             }
         }
 
-        private bool CompleteView(string code)
+        private async Task<bool> CompleteView(string code)
         {
             _logger.LogInformation("开始浏览");
-            Task.Delay(10 * 1000).Wait();
+            await Task.Delay(10 * 1000);
 
             var request = new ViewRequest(code);
-            var re = _vipApi.ViewComplete(request).Result;
+            var re = await _vipApi.ViewComplete(request);
             if (re.Code == 0)
             {
                 _logger.LogInformation("浏览完成");
@@ -473,7 +474,7 @@ namespace Ray.BiliBiliTool.Application
 
             else
             {
-                _logger.LogInformation("浏览失败：{msg}", re.ToJson());
+                _logger.LogInformation("浏览失败：{msg}", re.ToJsonStr());
                 return false;
             }
         }

@@ -358,3 +358,14 @@ tencentScf/.env
 
 # vs code
 .vscode
+
+# krew
+krew/bilipro
+krew/cmd/kubectl-bilipro
+krew/kustomization.yaml
+bilipro
+krew/pkg/utils/fixtures
+kustomization.yaml
+
+# cookie config
+**/Ray.BiliBiliTool.Console/cookies.json
