@@ -39,11 +39,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 		.gitignore = .gitignore
 		CHANGELOG.md = CHANGELOG.md
-		clean.cmd = clean.cmd
 		common.props = common.props
 		Dockerfile = Dockerfile
 		LICENSE = LICENSE
-		publish.bat = publish.bat
 		README.md = README.md
 	EndProjectSection
 EndProject
@@ -61,12 +59,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 		.github\workflows\publish-image.yml = .github\workflows\publish-image.yml
 		.github\workflows\publish-release.yml = .github\workflows\publish-release.yml
 		.github\workflows\repo-sync.yml = .github\workflows\repo-sync.yml
+		.github\workflows\tag.yml = .github\workflows\tag.yml
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{A93210FD-27B6-40E4-B08D-391F96CA2754}"
 	ProjectSection(SolutionItems) = preProject
-		docker\crontab = docker\crontab
-		docker\entry.sh = docker\entry.sh
 		docker\README.md = docker\README.md
 	EndProjectSection
 EndProject
@@ -115,6 +112,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ISSUE_TEMPLATE", "ISSUE_TEMPLATE", "{830361B7-BCC1-4853-879A-761B0FD86826}"
 	ProjectSection(SolutionItems) = preProject
 		.github\ISSUE_TEMPLATE\bug-report----.md = .github\ISSUE_TEMPLATE\bug-report----.md
+		.github\ISSUE_TEMPLATE\bug-report-qinglong----.md = .github\ISSUE_TEMPLATE\bug-report-qinglong----.md
 		.github\ISSUE_TEMPLATE\feature-request----.md = .github\ISSUE_TEMPLATE\feature-request----.md
 		.github\ISSUE_TEMPLATE\other----.md = .github\ISSUE_TEMPLATE\other----.md
 	EndProjectSection
@@ -123,7 +121,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "BiliAgentTest", "test\BiliA
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{75A9CC5C-DF92-4D72-A14C-625AA902855B}"
 	ProjectSection(SolutionItems) = preProject
-		docker\build\buildAndPushImage_multiArch.cmd = docker\build\buildAndPushImage_multiArch.cmd
 		docker\build\buildImage.cmd = docker\build\buildImage.cmd
 		docker\build\buildImage_amd64.cmd = docker\build\buildImage_amd64.cmd
 		docker\build\buildImage_arm64.cmd = docker\build\buildImage_arm64.cmd
@@ -133,7 +130,32 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "AppServiceTest", "test\AppS
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DomainServiceTest", "test\DomainServiceTest\DomainServiceTest.csproj", "{26B21C30-7358-4E7B-A73E-2272F10A6CA8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InfrastructureTest", "test\InfrastructureTest\InfrastructureTest.csproj", "{90C1DB73-B3DB-4BE5-AD1A-5248FE47860E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "InfrastructureTest", "test\InfrastructureTest\InfrastructureTest.csproj", "{90C1DB73-B3DB-4BE5-AD1A-5248FE47860E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ray.BiliBiliTool.Agent.FunctionalTests", "test\Ray.BiliBiliTool.Agent.FunctionalTests\Ray.BiliBiliTool.Agent.FunctionalTests.csproj", "{16F315CF-056A-4B08-8C3C-A3177EA3CBB9}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{2B5FD099-CC28-4FBC-9F20-F20300C5DFD2}"
+	ProjectSection(SolutionItems) = preProject
+		scripts\clean.cmd = scripts\clean.cmd
+		scripts\publish.bat = scripts\publish.bat
+		scripts\publish.ps1 = scripts\publish.ps1
+		scripts\publish.sh = scripts\publish.sh
+		scripts\ut.ps1 = scripts\ut.ps1
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ray.BiliBiliTool.Web.Client", "src\Ray.BiliBiliTool.Web.Client\Ray.BiliBiliTool.Web.Client.csproj", "{5772E00F-271F-4B25-8B10-A3C24D8D3E10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ray.BiliBiliTool.Web", "src\Ray.BiliBiliTool.Web\Ray.BiliBiliTool.Web.csproj", "{189F1FF4-2BFA-4F91-A6B2-00D00AC2910C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazingQuartz.Core", "src\BlazingQuartz.Core\BlazingQuartz.Core.csproj", "{C947CA59-157C-47F0-A842-7912FACDADA7}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazingQuartz.Jobs.Abstractions", "src\BlazingQuartz.Jobs.Abstractions\BlazingQuartz.Jobs.Abstractions.csproj", "{5792B0A0-A3F5-461D-AD44-8E8778298BE4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BlazingQuartz.Jobs", "src\BlazingQuartz.Jobs\BlazingQuartz.Jobs.csproj", "{1F93A755-60A6-4B14-A522-633A732F3B91}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ray.BiliBiliTool.Domain", "src\Ray.BiliBiliTool.Domain\Ray.BiliBiliTool.Domain.csproj", "{C1334E67-CCF9-4F5B-9C1F-B9516A8270AB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ray.BiliBiliTool.Infrastructure.EF", "src\Ray.BiliBiliTool.Infrastructure.EF\Ray.BiliBiliTool.Infrastructure.EF.csproj", "{59583288-CE93-42A4-AC9F-67DE347A02A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -193,6 +215,38 @@ Global
 		{90C1DB73-B3DB-4BE5-AD1A-5248FE47860E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90C1DB73-B3DB-4BE5-AD1A-5248FE47860E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{90C1DB73-B3DB-4BE5-AD1A-5248FE47860E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16F315CF-056A-4B08-8C3C-A3177EA3CBB9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16F315CF-056A-4B08-8C3C-A3177EA3CBB9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16F315CF-056A-4B08-8C3C-A3177EA3CBB9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16F315CF-056A-4B08-8C3C-A3177EA3CBB9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5772E00F-271F-4B25-8B10-A3C24D8D3E10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5772E00F-271F-4B25-8B10-A3C24D8D3E10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5772E00F-271F-4B25-8B10-A3C24D8D3E10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5772E00F-271F-4B25-8B10-A3C24D8D3E10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{189F1FF4-2BFA-4F91-A6B2-00D00AC2910C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{189F1FF4-2BFA-4F91-A6B2-00D00AC2910C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{189F1FF4-2BFA-4F91-A6B2-00D00AC2910C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{189F1FF4-2BFA-4F91-A6B2-00D00AC2910C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C947CA59-157C-47F0-A842-7912FACDADA7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C947CA59-157C-47F0-A842-7912FACDADA7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C947CA59-157C-47F0-A842-7912FACDADA7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C947CA59-157C-47F0-A842-7912FACDADA7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5792B0A0-A3F5-461D-AD44-8E8778298BE4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5792B0A0-A3F5-461D-AD44-8E8778298BE4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5792B0A0-A3F5-461D-AD44-8E8778298BE4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5792B0A0-A3F5-461D-AD44-8E8778298BE4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1F93A755-60A6-4B14-A522-633A732F3B91}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1F93A755-60A6-4B14-A522-633A732F3B91}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1F93A755-60A6-4B14-A522-633A732F3B91}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1F93A755-60A6-4B14-A522-633A732F3B91}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C1334E67-CCF9-4F5B-9C1F-B9516A8270AB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C1334E67-CCF9-4F5B-9C1F-B9516A8270AB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C1334E67-CCF9-4F5B-9C1F-B9516A8270AB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C1334E67-CCF9-4F5B-9C1F-B9516A8270AB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{59583288-CE93-42A4-AC9F-67DE347A02A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{59583288-CE93-42A4-AC9F-67DE347A02A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{59583288-CE93-42A4-AC9F-67DE347A02A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{59583288-CE93-42A4-AC9F-67DE347A02A1}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -224,6 +278,15 @@ Global
 		{1D9DFF34-71EA-44AE-85B0-1F10C9BA0D81} = {E9BDDCBE-A57D-4E3B-8252-708088386ADF}
 		{26B21C30-7358-4E7B-A73E-2272F10A6CA8} = {E9BDDCBE-A57D-4E3B-8252-708088386ADF}
 		{90C1DB73-B3DB-4BE5-AD1A-5248FE47860E} = {E9BDDCBE-A57D-4E3B-8252-708088386ADF}
+		{16F315CF-056A-4B08-8C3C-A3177EA3CBB9} = {E9BDDCBE-A57D-4E3B-8252-708088386ADF}
+		{2B5FD099-CC28-4FBC-9F20-F20300C5DFD2} = {F3DE0D72-426B-4AD9-B3ED-3343CF4223F1}
+		{5772E00F-271F-4B25-8B10-A3C24D8D3E10} = {38736647-2196-417E-8519-C48A012A63D9}
+		{189F1FF4-2BFA-4F91-A6B2-00D00AC2910C} = {38736647-2196-417E-8519-C48A012A63D9}
+		{C947CA59-157C-47F0-A842-7912FACDADA7} = {98051127-2868-4F5C-9B2C-2150975E05F3}
+		{5792B0A0-A3F5-461D-AD44-8E8778298BE4} = {98051127-2868-4F5C-9B2C-2150975E05F3}
+		{1F93A755-60A6-4B14-A522-633A732F3B91} = {98051127-2868-4F5C-9B2C-2150975E05F3}
+		{C1334E67-CCF9-4F5B-9C1F-B9516A8270AB} = {120917DC-474C-448B-9EBB-1B3BA3A20B9D}
+		{59583288-CE93-42A4-AC9F-67DE347A02A1} = {110D3D21-8E9B-45AB-9667-6DA1DB3862AC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {197319DA-1148-4A99-847C-8B270B6A29AB}

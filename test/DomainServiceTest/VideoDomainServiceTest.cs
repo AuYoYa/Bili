@@ -1,4 +1,3 @@
-
 using Ray.BiliBiliTool.Infrastructure.Helpers;
 using Ray.Infrastructure.Helpers;
 
@@ -18,7 +17,7 @@ namespace DomainServiceTest
             var config = Global.ConfigurationRoot;
             var domainService = scope.ServiceProvider.GetRequiredService<IVideoDomainService>();
 
-            await domainService.GetVideoCountOfUp(1585227649);
+            await domainService.GetVideoCountOfUp(1585227649, null);
         }
 
         [Fact]
@@ -28,7 +27,7 @@ namespace DomainServiceTest
             var config = Global.ConfigurationRoot;
             var domainService = scope.ServiceProvider.GetRequiredService<IVideoDomainService>();
 
-            await domainService.GetRandomVideoOfUp(1585227649,1);
+            await domainService.GetRandomVideoOfUp(1585227649, 1, null);
         }
     }
 }

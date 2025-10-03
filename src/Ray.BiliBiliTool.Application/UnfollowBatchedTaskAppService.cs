@@ -1,30 +1,33 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using Ray.BiliBiliTool.Agent;
 using Ray.BiliBiliTool.Application.Attributes;
 using Ray.BiliBiliTool.Application.Contracts;
 using Ray.BiliBiliTool.Config.Options;
 using Ray.BiliBiliTool.DomainService.Interfaces;
+using Ray.BiliBiliTool.Infrastructure.Cookie;
 
-namespace Ray.BiliBiliTool.Application
+namespace Ray.BiliBiliTool.Application;
+
+public class UnfollowBatchedTaskAppService(
+    ILogger<UnfollowBatchedTaskAppService> logger,
+    IOptionsMonitor<UnfollowBatchedTaskOptions> unfollowBatchedTaskOptions,
+    IAccountDomainService accountDomainService,
+    CookieStrFactory<BiliCookie> cookieStrFactory
+) : BaseMultiAccountsAppService(logger, cookieStrFactory), IUnfollowBatchedTaskAppService
 {
-    public class UnfollowBatchedTaskAppService : AppService, IUnfollowBatchedTaskAppService
+    [TaskInterceptor("批量取关", TaskLevel.One)]
+    protected override async Task DoTaskAccountAsync(
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
     {
-        private readonly IAccountDomainService _accountDomainService;
-
-        public UnfollowBatchedTaskAppService(
-            IAccountDomainService accountDomainService
-            )
+        if (!unfollowBatchedTaskOptions.CurrentValue.IsEnable)
         {
-            _accountDomainService = accountDomainService;
+            logger.LogInformation("已配置为关闭，跳过");
+            return;
         }
 
-        [TaskInterceptor("批量取关", TaskLevel.One)]
-        public override async Task DoTaskAsync(CancellationToken cancellationToken)
-        {
-            await _accountDomainService.UnfollowBatched();
-        }
+        await accountDomainService.UnfollowBatched(ck);
     }
 }

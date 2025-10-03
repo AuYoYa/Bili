@@ -2,7 +2,7 @@
 
 <!-- TOC depthFrom:2 -->
 
-- [1. 任意系统，但已安装`.NET 6.0`](#1-任意系统但已安装net-60)
+- [1. 任意系统，但已安装`.NET 8.0`](#1-任意系统但已安装net-80)
 - [2. Win](#2-win)
 - [3. Linux:](#3-linux)
 - [4. macOS](#4-macos)
@@ -16,9 +16,9 @@
 
 对于不是开发者的朋友，可以通过下载 [BiliBiliTool/release](https://github.com/RayWangQvQ/BiliBiliToolPro/releases) 到本地或任意服务器运行。
 
-## 1. 任意系统，但已安装`.NET 6.0`
+## 1. 任意系统，但已安装`.NET 8.0`
 
-任何操作系统，不管是Win还是Linux还是mac，只要已安装了`.NET 6.0` 环境，均可通过下载`net-dependent.zip`运行。
+任何操作系统，不管是Win还是Linux还是mac，只要已安装了`.NET 8.0` 环境，均可通过下载`net-dependent.zip`运行。
 
 下载解压后，进入应用目录，执行`dotnet ./Ray.BiliBiliTool.Console.dll --runTasks=Login`
 
@@ -28,20 +28,21 @@
 
 ![运行图示](imgs/run-exe.png)
 
-P.S.这里的运行环境指的是 `.NET Runtime 6.0.0` ，安装方法可详见 [常见问题](questions.md) 中的 **本地或服务器如何安装.net环境**
+P.S.这里的运行环境指的是 `.NET Runtime 8.0.0` ，安装方法可详见 [常见问题](questions.md) 中的 **本地或服务器如何安装.net环境**
 
 ## 2. Win
 
 请下载 `win-x86-x64.zip`，此文件已自包含（self-contained）运行环境。
 
 解压后，在应用目录打开cmd或powershell，执行`.\Ray.BiliBiliTool.Console.exe --runTasks=Login`，扫码登录。
+也可以直接双击`Ray.BiliBiliTool.Console.exe`来运行，建议使用windows自带的定时任务来执行它
 
 ## 3. Linux:
 
 ```
 wget https://github.com/RayWangQvQ/BiliBiliToolPro/releases/download/0.3.1/bilibili-tool-pro-v0.3.1-linux-x64.zip
 unzip bilibili-tool-pro-v0.3.1-linux-x64.zip
-cd cd ./linux-x64/
+cd ./linux-x64/
 ./Ray.BiliBiliTool.Console --runTasks=Login
 ```
 

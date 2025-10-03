@@ -1,482 +1,259 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using Ray.BiliBiliTool.Agent;
 using Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos;
-using Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos.VipTask;
-using Ray.BiliBiliTool.Agent.BiliBiliAgent.Interfaces;
+using Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos.Mall;
 using Ray.BiliBiliTool.Application.Attributes;
 using Ray.BiliBiliTool.Application.Contracts;
+using Ray.BiliBiliTool.Config.Options;
 using Ray.BiliBiliTool.DomainService.Interfaces;
+using Ray.BiliBiliTool.Infrastructure.Cookie;
 
-namespace Ray.BiliBiliTool.Application
+namespace Ray.BiliBiliTool.Application;
+
+public class VipBigPointAppService(
+    ILogger<VipBigPointAppService> logger,
+    IOptionsMonitor<VipBigPointOptions> vipBigPointOptions,
+    IAccountDomainService loginDomainService,
+    IVipBigPointDomainService vipBigPointDomainService,
+    CookieStrFactory<BiliCookie> cookieFactory
+) : BaseMultiAccountsAppService(logger, cookieFactory), IVipBigPointAppService
 {
-    public class VipBigPointAppService : AppService, IVipBigPointAppService
+    [TaskInterceptor("大会员大积分", TaskLevel.One)]
+    protected override async Task DoTaskAccountAsync(
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
     {
-        private readonly ILogger<VipBigPointAppService> _logger;
-        private readonly IConfiguration _configuration;
-        private readonly IVipBigPointApi _vipApi;
-        private readonly IAccountDomainService _loginDomainService;
-
-        public VipBigPointAppService(
-            IConfiguration configuration,
-            ILogger<VipBigPointAppService> logger,
-            IVipBigPointApi vipApi,
-            IAccountDomainService loginDomainService
-            )
+        if (!vipBigPointOptions.CurrentValue.IsEnable)
         {
-            _configuration = configuration;
-            _logger = logger;
-            _vipApi = vipApi;
-            _loginDomainService = loginDomainService;
+            logger.LogInformation("已配置为关闭，跳过");
+            return;
         }
 
-        [TaskInterceptor("大会员大积分", TaskLevel.One)]
-        public override async Task DoTaskAsync(CancellationToken cancellationToken)
+        bool isVip = await LoginAndCheckVipStatusAsync(ck, cancellationToken);
+        if (!isVip)
         {
-            var ui = await GetUserInfo();
-
-            if (ui.GetVipType() == VipType.None)
-            {
-                _logger.LogInformation("当前不是大会员或已过期，跳过任务");
-                return;
-            }
-
-            var re = await _vipApi.GetTaskList();
-
-            if (re.Code != 0) throw new Exception(re.ToJsonStr());
-
-            VipTaskInfo taskInfo = re.Data;
-            taskInfo.LogInfo(_logger);
-
-            //签到
-            taskInfo = await Sign(taskInfo);
-
-            //福利任务
-            taskInfo = await Bonus(taskInfo);
-
-            //体验任务
-            taskInfo = await Privilege(taskInfo);
-
-            //日常任务
-
-            //浏览追番频道页10秒
-            taskInfo = await ViewAnimate(taskInfo);
-
-            //浏览影视频道页10秒
-            taskInfo = await ViewFilmChannel(taskInfo);
-
-            //浏览会员购页面10秒
-            taskInfo = ViewVipMall(taskInfo);
-
-            //观看任意正片内容
-            taskInfo = await ViewVideo(taskInfo);
-
-            //领取购买任务
-            taskInfo = await BuyVipVideo(taskInfo);
-            taskInfo = await BuyVipProduct(taskInfo);
-            taskInfo = await BuyVipMall(taskInfo);
-
-            taskInfo.LogInfo(_logger);
+            return;
         }
 
-        [TaskInterceptor("测试Cookie")]
-        private async Task<UserInfo> GetUserInfo()
-        {
-            UserInfo userInfo = await _loginDomainService.LoginByCookie();
-            if (userInfo == null) throw new Exception("登录失败，请检查Cookie");//终止流程
+        await ExpressAsync(ck, cancellationToken);
+        await SignAsync(ck, cancellationToken);
+        var combine = await CheckCombineAsync(ck, cancellationToken);
 
-            return userInfo;
+        // 2 个一次性任务
+        await BonusMissionAsync(combine, ck, cancellationToken);
+        await PrivilegeMissionAsync(combine, ck, cancellationToken);
+
+        // 日常任务
+        await ReceiveMissionsAsync(combine, ck, cancellationToken);
+        await DailyMissionsAsync(combine, ck, cancellationToken);
+
+        await CheckCombineAsync(ck, cancellationToken);
+    }
+
+    [TaskInterceptor("登录并检测会员状态")]
+    private async Task<bool> LoginAndCheckVipStatusAsync(
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        UserInfo userInfo = await loginDomainService.LoginByCookie(ck);
+        if (userInfo.GetVipType() == VipType.None)
+        {
+            logger.LogInformation("当前不是大会员，跳过任务");
+            return false;
         }
 
-        [TaskInterceptor("签到", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> Sign(VipTaskInfo info)
-        {
-            if (info.Task_info.Sing_task_item.IsTodaySigned)
-            {
-                _logger.LogInformation("已完成，跳过");
-                _logger.LogInformation("今日获得签到积分：{score}", info.Task_info.Sing_task_item.TodayHistory?.Score);
-                _logger.LogInformation("累计签到{count}天", info.Task_info.Sing_task_item.Count);
-                return info;
-            }
-
-            var re = await _vipApi.Sign(new SignRequest());
-            if (re.Code != 0) throw new Exception(re.ToJsonStr());
-
-            //确认
-            var infoResult = await _vipApi.GetTaskList();
-            if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
-            info = infoResult.Data;
-
-            _logger.LogInformation("今日可获得签到积分：{score}", info.Task_info.Sing_task_item.TodayHistory?.Score);
-            _logger.LogInformation(info.Task_info.Sing_task_item.IsTodaySigned ? "签到成功" : "签到失败");
-            _logger.LogInformation("累计签到{count}天", info.Task_info.Sing_task_item.Count);
-
-            return info;
-        }
-
-        [TaskInterceptor("福利任务", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> Bonus(VipTaskInfo info)
-        {
-            var bonusTask = GetTarget(info);
-
-            //如果状态不等于3，则做
-            if (bonusTask.state == 3)
-            {
-                _logger.LogInformation("已完成，跳过");
-                return info;
-            }
-
-            //0需要领取
-            if (bonusTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(bonusTask.task_code);
-            }
-
-            _logger.LogInformation("开始完成任务");
-            var re = await Complete(bonusTask.task_code);
-
-            //确认
-            if (re)
-            {
-                var infoResult = await _vipApi.GetTaskList();
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
-                info = infoResult.Data;
-                bonusTask = GetTarget(info);
-
-                _logger.LogInformation("确认：{re}", bonusTask.state == 3 && bonusTask.complete_times >= 1);
-            }
-
-            return info;
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "福利任务")
-                    .common_task_item
-                    .First(x => x.task_code == "bonus");
-            }
-        }
-
-        [TaskInterceptor("体验任务", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> Privilege(VipTaskInfo info)
-        {
-            var privilegeTask = GetTarget(info);
-
-            //如果状态不等于3，则做
-            if (privilegeTask.state == 3)
-            {
-                _logger.LogInformation("已完成，跳过");
-                return info;
-            }
-
-            //0需要领取
-            if (privilegeTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(privilegeTask.task_code);
-            }
-
-            _logger.LogInformation("开始完成任务");
-            var re = await Complete(privilegeTask.task_code);
-
-            //确认
-            if (re)
-            {
-                var infoResult = await _vipApi.GetTaskList();
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
-                info = infoResult.Data;
-                privilegeTask = GetTarget(info);
-
-                _logger.LogInformation("确认：{re}", privilegeTask.state == 3 && privilegeTask.complete_times >= 1);
-            }
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "体验任务")
-                    .common_task_item
-                    .First(x => x.task_code == "privilege");
-            }
-
-            return info;
-        }
-
-        [TaskInterceptor("浏览追番频道页10秒", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> ViewAnimate(VipTaskInfo info)
-        {
-            var code = "jp_channel";
-
-            CommonTaskItem targetTask = GetTarget(info);
-
-            //如果状态不等于3，则做
-            if (targetTask.state == 3)
-            {
-                _logger.LogInformation("已完成，跳过");
-                return info;
-            }
-
-            //0需要领取
-            if (targetTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(targetTask.task_code);
-            }
-
-            _logger.LogInformation("开始完成任务");
-            var re = await CompleteView(code);
-
-            //确认
-            if (re)
-            {
-                var infoResult = await _vipApi.GetTaskList();
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
-                info = infoResult.Data;
-                targetTask = GetTarget(info);
-
-                _logger.LogInformation("确认：{re}", targetTask.state == 3 && targetTask.complete_times >= 1);
-            }
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "日常任务")
-                    .common_task_item
-                    .First(x => x.task_code == "animatetab");
-            }
-
-            return info;
-        }
-
-        [TaskInterceptor("浏览影视频道页10秒", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> ViewFilmChannel(VipTaskInfo info)
-        {
-            var code = "tv_channel";
-
-            CommonTaskItem targetTask = GetTarget(info);
-
-            //如果状态不等于3，则做
-            if (targetTask.state == 3)
-            {
-                _logger.LogInformation("已完成，跳过");
-                return info;
-            }
-
-            //0需要领取
-            if (targetTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(targetTask.task_code);
-            }
-
-            _logger.LogInformation("开始完成任务");
-            var re = await CompleteView(code);
-
-            //确认
-            if (re)
-            {
-                var infoResult = await _vipApi.GetTaskList();
-                if (infoResult.Code != 0) throw new Exception(infoResult.ToJsonStr());
-                info = infoResult.Data;
-                targetTask = GetTarget(info);
-
-                _logger.LogInformation("确认：{re}", targetTask.state == 3 && targetTask.complete_times >= 1);
-            }
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "日常任务")
-                    .common_task_item
-                    .First(x => x.task_code == "filmtab");
-            }
-
-            return info;
-        }
-
-        [TaskInterceptor("浏览会员购页面10秒", TaskLevel.Two, false)]
-        private VipTaskInfo ViewVipMall(VipTaskInfo info)
-        {
-            //todo
-            _logger.LogInformation("待实现...");
-            return info;
-        }
-
-        [TaskInterceptor("观看任意正片内容", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> ViewVideo(VipTaskInfo info)
-        {
-            CommonTaskItem targetTask = GetTarget(info);
-
-            //如果状态不等于3，则做
-            if (targetTask.state == 3)
-            {
-                _logger.LogInformation("已完成，跳过");
-                return info;
-            }
-
-            //0需要领取
-            if (targetTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(targetTask.task_code);
-            }
-
-            _logger.LogInformation("开始完成任务");
-            _logger.LogInformation("待开发...");//todo
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "日常任务")
-                    .common_task_item
-                    .First(x => x.task_code == "ogvwatch");
-            }
-
-            return info;
-        }
-
-        [TaskInterceptor("购买单点付费影片（仅领取）", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> BuyVipVideo(VipTaskInfo info)
-        {
-            CommonTaskItem targetTask = GetTarget(info);
-
-            if (targetTask.state is 3 or 1)
-            {
-                var re = targetTask.state == 1 ? "已领取" : "已完成";
-                _logger.LogInformation("{re}，跳过", re);
-                return info;
-            }
-
-            //0需要领取
-            if (targetTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(targetTask.task_code);
-            }
-
-            return info;
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "日常任务")
-                    .common_task_item
-                    .First(x => x.task_code == "tvodbuy");
-            }
-        }
-
-        [TaskInterceptor("购买指定大会员产品（仅领取）", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> BuyVipProduct(VipTaskInfo info)
-        {
-            CommonTaskItem targetTask = GetTarget(info);
-
-            if (targetTask.state is 3 or 1)
-            {
-                var re = targetTask.state == 1 ? "已领取" : "已完成";
-                _logger.LogInformation("{re}，跳过", re);
-                return info;
-            }
-
-            //0需要领取
-            if (targetTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(targetTask.task_code);
-            }
-
-            return info;
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "日常任务")
-                    .common_task_item
-                    .First(x => x.task_code == "subscribe");
-            }
-        }
-
-        [TaskInterceptor("购买指定会员购商品（仅领取）", TaskLevel.Two, false)]
-        private async Task<VipTaskInfo> BuyVipMall(VipTaskInfo info)
-        {
-            CommonTaskItem targetTask = GetTarget(info);
-
-            if (targetTask.state is 3 or 1)
-            {
-                var re = targetTask.state == 1 ? "已领取" : "已完成";
-                _logger.LogInformation("{re}，跳过", re);
-                return info;
-            }
-
-            //0需要领取
-            if (targetTask.state == 0)
-            {
-                _logger.LogInformation("开始领取任务");
-                await TryReceive(targetTask.task_code);
-            }
-
-            return info;
-
-            CommonTaskItem GetTarget(VipTaskInfo info)
-            {
-                return info.Task_info.Modules.First(x => x.module_title == "日常任务")
-                    .common_task_item
-                    .First(x => x.task_code == "vipmallbuy");
-            }
-        }
-
-        /// <summary>
-        /// 领取任务
-        /// </summary>
-        private async Task TryReceive(string taskCode)
-        {
-            BiliApiResponse re = null;
-            try
-            {
-                var request = new ReceiveOrCompleteTaskRequest(taskCode);
-                re = await _vipApi.Receive(request);
-                if (re.Code == 0)
-                    _logger.LogInformation("领取任务成功");
-                else
-                    _logger.LogInformation("领取任务失败：{msg}", re.ToJsonStr());
-            }
-            catch (Exception e)
-            {
-                _logger.LogError("领取任务异常");
-                _logger.LogError(e.Message + re?.ToJsonStr());
-            }
-        }
-
-        private async Task<bool> Complete(string taskCode)
-        {
-            var request = new ReceiveOrCompleteTaskRequest(taskCode);
-            var re = await _vipApi.Complete(request);
-            if (re.Code == 0)
-            {
-                _logger.LogInformation("已完成");
-                return true;
-            }
-
-            else
-            {
-                _logger.LogInformation("失败：{msg}", re.ToJsonStr());
-                return false;
-            }
-        }
-
-        private async Task<bool> CompleteView(string code)
-        {
-            _logger.LogInformation("开始浏览");
-            await Task.Delay(10 * 1000);
-
-            var request = new ViewRequest(code);
-            var re = await _vipApi.ViewComplete(request);
-            if (re.Code == 0)
-            {
-                _logger.LogInformation("浏览完成");
-                return true;
-            }
-
-            else
-            {
-                _logger.LogInformation("浏览失败：{msg}", re.ToJsonStr());
-                return false;
-            }
-        }
+        return true;
+    }
+
+    [TaskInterceptor("查看大会员大积分状态")]
+    private async Task<VipBigPointCombine> CheckCombineAsync(
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        VipBigPointCombine combine = await vipBigPointDomainService.GetCombineAsync(ck);
+        combine.LogFullInfo(logger);
+        return combine;
+    }
+
+    /// <summary>
+    /// 领经验（专属等级加速包），观看视频 1 分钟领取 10 经验
+    /// </summary>
+    /// <param name="ck"></param>
+    /// <param name="cancellationToken"></param>
+    [TaskInterceptor("大会员经验观看任务", rethrowWhenException: false)]
+    private async Task ExpressAsync(BiliCookie ck, CancellationToken cancellationToken = default)
+    {
+        await vipBigPointDomainService.VipExpressAsync(ck);
+    }
+
+    [TaskInterceptor("签到任务", rethrowWhenException: false)]
+    private async Task SignAsync(BiliCookie ck, CancellationToken cancellationToken = default)
+    {
+        await vipBigPointDomainService.SignAsync(ck);
+    }
+
+    [TaskInterceptor("领取日常任务", rethrowWhenException: false)]
+    private async Task ReceiveMissionsAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveDailyMissionsAsync(combine, ck);
+    }
+
+    [TaskInterceptor("福利任务", rethrowWhenException: false)]
+    private async Task BonusMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "福利任务",
+            "bonus",
+            ck,
+            async (_, _) => await vipBigPointDomainService.CompleteAsync("bonus", ck)
+        );
+    }
+
+    [TaskInterceptor("体验任务", rethrowWhenException: false)]
+    private async Task PrivilegeMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "体验任务",
+            "privilege",
+            ck,
+            async (_, _) => await vipBigPointDomainService.CompleteAsync("privilege", ck)
+        );
+    }
+
+    [TaskInterceptor("日常任务", rethrowWhenException: false)]
+    private async Task DailyMissionsAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await DailyDressViewMissionAsync(combine, ck, cancellationToken);
+        await DailyVipMallViewMissionAsync(combine, ck, cancellationToken);
+        await DailyVipMallBuyMissionAsync(cancellationToken);
+        await DailyAnimateTabMissionAsync(combine, ck, cancellationToken);
+        await DailyFilmTabMissionAsync(combine, ck, cancellationToken);
+        await DailyOgvWatchMissionAsync(combine, ck, cancellationToken);
+        await DailyTvOdBuyMissionAsync(cancellationToken);
+        await DailyDressBuyAmountMissionAsync(cancellationToken);
+    }
+
+    [TaskInterceptor("日常1：浏览装扮商城", TaskLevel.Three, rethrowWhenException: false)]
+    private async Task DailyDressViewMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "日常任务",
+            "dress-view",
+            ck,
+            async (_, _) => await vipBigPointDomainService.CompleteV2Async("dress-view", ck)
+        );
+    }
+
+    [TaskInterceptor("日常2：浏览会员购", TaskLevel.Three, rethrowWhenException: false)]
+    private async Task DailyVipMallViewMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "日常任务",
+            "vipmallview",
+            ck,
+            async (_, _) =>
+                await vipBigPointDomainService.CompleteViewVipMallAsync("vipmallview", ck)
+        );
+    }
+
+    [TaskInterceptor("日常3：购买会员购", TaskLevel.Three, rethrowWhenException: false)]
+    private Task DailyVipMallBuyMissionAsync(CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("需购买，跳过");
+        return Task.CompletedTask;
+    }
+
+    [TaskInterceptor("日常4：浏览追番频道", TaskLevel.Three, rethrowWhenException: false)]
+    private async Task DailyAnimateTabMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "日常任务",
+            "animatetab",
+            ck,
+            async (_, _) => await vipBigPointDomainService.CompleteViewAsync("animatetab", ck)
+        );
+    }
+
+    [TaskInterceptor("日常5：浏览影视频道", TaskLevel.Three, rethrowWhenException: false)]
+    private async Task DailyFilmTabMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "日常任务",
+            "filmtab",
+            ck,
+            async (_, _) => await vipBigPointDomainService.CompleteViewAsync("filmtab", ck)
+        );
+    }
+
+    [TaskInterceptor("日常6：观看剧集", TaskLevel.Three, rethrowWhenException: false)]
+    private async Task DailyOgvWatchMissionAsync(
+        VipBigPointCombine combine,
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await vipBigPointDomainService.ReceiveAndCompleteAsync(
+            combine,
+            "日常任务",
+            "ogvwatchnew",
+            ck,
+            async (_, _) => await vipBigPointDomainService.CompleteV2Async("ogvwatchnew", ck)
+        );
+    }
+
+    [TaskInterceptor("日常7：购买影片", TaskLevel.Three, rethrowWhenException: false)]
+    private Task DailyTvOdBuyMissionAsync(CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("需购买，跳过");
+        return Task.CompletedTask;
+    }
+
+    [TaskInterceptor("日常8：购买装扮", TaskLevel.Three, rethrowWhenException: false)]
+    private Task DailyDressBuyAmountMissionAsync(CancellationToken cancellationToken = default)
+    {
+        logger.LogInformation("需购买，跳过");
+        return Task.CompletedTask;
     }
 }

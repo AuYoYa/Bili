@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
-using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Ray.BiliBiliTool.Console;
@@ -17,20 +17,20 @@ namespace LogTest
         public TestWorkWeiXin()
         {
             Environment.SetEnvironmentVariable("ASPNETCORE_ENVIRONMENT", "Development");
-            Program.CreateHost(new string[] { });
+            Program.CreateHost(new string[] { "ENVIRONMENT=Development" });
 
             _key = Global.ConfigurationRoot["Serilog:WriteTo:4:Args:webHookUrl"];
         }
 
         [Fact]
-        public void Test2()
+        public async Task Test2()
         {
-            WorkWeiXinApiClient client = new WorkWeiXinApiClient(_key);
+            var client = new WorkWeiXinApiClient(_key, WorkWeiXinMsgType.text);
 
             //string msg = LogConstants.Msg;
             string msg = LogConstants.Msg2;
 
-            var result = client.PushMessage(msg);
+            var result = await client.PushMessageAsync(msg);
             Debug.WriteLine(result.Content.ReadAsStringAsync().Result);
         }
     }

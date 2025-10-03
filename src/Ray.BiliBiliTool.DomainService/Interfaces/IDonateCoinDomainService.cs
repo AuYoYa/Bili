@@ -1,18 +1,16 @@
-﻿using Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos;
-using System;
-using System.Threading.Tasks;
+﻿using Ray.BiliBiliTool.Agent;
+using Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos;
 
-namespace Ray.BiliBiliTool.DomainService.Interfaces
+namespace Ray.BiliBiliTool.DomainService.Interfaces;
+
+/// <summary>
+/// 投币
+/// </summary>
+public interface IDonateCoinDomainService : IDomainService
 {
-    /// <summary>
-    /// 投币
-    /// </summary>
-    public interface IDonateCoinDomainService : IDomainService
-    {
-        Task AddCoinsForVideos();
+    Task AddCoinsForVideos(BiliCookie ck);
 
-        Task<UpVideoInfo> TryGetCanDonatedVideo();
+    Task<UpVideoInfo?> TryGetCanDonatedVideo(BiliCookie ck);
 
-        Task<bool> DoAddCoinForVideo(UpVideoInfo video, bool select_like);
-    }
+    Task<bool> DoAddCoinForVideo(UpVideoInfo video, bool select_like, BiliCookie ck);
 }

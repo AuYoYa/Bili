@@ -1,8 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -10,195 +6,148 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ray.BiliBiliTool.Application.Contracts;
 using Ray.BiliBiliTool.Config.Options;
-using Ray.BiliBiliTool.Infrastructure.Cookie;
+using Ray.Serilog.Sinks.Batched;
 using Constants = Ray.BiliBiliTool.Config.Constants;
 
-namespace Ray.BiliBiliTool.Console
+namespace Ray.BiliBiliTool.Console;
+
+public class BiliBiliToolHostedService(
+    IHostApplicationLifetime applicationLifetime,
+    IServiceProvider serviceProvider,
+    IHostEnvironment environment,
+    IConfiguration configuration,
+    ILogger<BiliBiliToolHostedService> logger,
+    IOptionsMonitor<SecurityOptions> securityOptions
+) : IHostedService
 {
-    public class BiliBiliToolHostedService : IHostedService
+    private readonly SecurityOptions _securityOptions = securityOptions.CurrentValue;
+
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        private readonly IHostApplicationLifetime _applicationLifetime;
-        private readonly IServiceProvider _serviceProvider;
-        private readonly IHostEnvironment _environment;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<BiliBiliToolHostedService> _logger;
-        private readonly CookieStrFactory _cookieStrFactory;
-        private readonly SecurityOptions _securityOptions;
-
-        public BiliBiliToolHostedService(
-            IHostApplicationLifetime applicationLifetime
-            , IServiceProvider serviceProvider
-            , IHostEnvironment environment
-            , IConfiguration configuration
-            , ILogger<BiliBiliToolHostedService> logger
-            , CookieStrFactory cookieStrFactory
-            , IOptionsMonitor<SecurityOptions> securityOptions)
+        try
         {
-            _applicationLifetime = applicationLifetime;
-            _serviceProvider = serviceProvider;
-            _environment = environment;
-            _configuration = configuration;
-            _logger = logger;
-            _cookieStrFactory = cookieStrFactory;
-            _securityOptions = securityOptions.CurrentValue;
+            logger.LogInformation("BiliBiliToolPro 开始运行..." + Environment.NewLine);
+
+            bool pass = await PreCheckAsync(cancellationToken);
+            if (!pass)
+                return;
+
+            await RandomSleepAsync(cancellationToken);
+
+            string[] tasks = await ReadTargetTasksAsync(cancellationToken);
+            logger.LogInformation("【目标任务】{tasks}", string.Join(",", tasks));
+            await DoTasksAsync(tasks, cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError("程序异常终止，原因：{msg}", ex.Message);
+            throw;
+        }
+        finally
+        {
+            LogAppInfo();
+
+            //环境
+            logger.LogInformation("运行环境：{env}", environment.EnvironmentName);
+            logger.LogInformation(
+                "应用目录：{path}" + Environment.NewLine,
+                environment.ContentRootPath
+            );
+            logger.LogInformation("运行结束");
+
+            //自动退出
+            applicationLifetime.StopApplication();
+        }
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        return Task.CompletedTask;
+    }
+
+    private Task<bool> PreCheckAsync(CancellationToken cancellationToken)
+    {
+        //是否跳过
+        if (_securityOptions.IsSkipDailyTask)
+        {
+            logger.LogWarning("已配置为跳过任务" + Environment.NewLine);
+            return Task.FromResult(false);
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        return Task.FromResult(true);
+    }
+
+    private async Task RandomSleepAsync(CancellationToken cancellationToken)
+    {
+        if (
+            configuration["RunTasks"]!.Contains("Login")
+            || configuration["RunTasks"]!.Contains("Test")
+        )
+            return;
+
+        if (_securityOptions.RandomSleepMaxMin > 0)
         {
-            var isNotifySingle = _configuration.GetSection("Notification:IsSingleAccountSingleNotify").Get<bool>();
+            int randomMin = new Random().Next(1, ++_securityOptions.RandomSleepMaxMin);
+            logger.LogInformation("随机休眠{min}分钟" + Environment.NewLine, randomMin);
+            await Task.Delay(randomMin * 1000 * 60, cancellationToken);
+        }
+    }
 
-            try
-            {
-                _logger.LogInformation("BiliBiliToolPro 开始运行...{newLine}", Environment.NewLine);
-
-                var pass = await PreCheckAsync(cancellationToken);
-                if (!pass) return;
-
-                await RandomSleepAsync(cancellationToken);
-
-                var tasks = await ReadTargetTasksAsync(cancellationToken);
-                _logger.LogInformation("【目标任务】{tasks}", string.Join(",", tasks));
-
-                if (tasks.Contains("Login"))
-                {
-                    await DoTasksAsync(tasks, cancellationToken);
-                }
-
-                else
-                {
-                    for (int i = 0; i < _cookieStrFactory.Count; i++)
-                    {
-                        _cookieStrFactory.CurrentNum = i + 1;
-                        _logger.LogInformation("######### 账号 {num} #########{newLine}", _cookieStrFactory.CurrentNum, Environment.NewLine);
-
-                        try
-                        {
-                            await DoTasksAsync(tasks, cancellationToken);
-                            if (isNotifySingle)
-                            {
-                                LogAppInfo();
-
-                                var accountName = _cookieStrFactory.Count > 1 ? $"账号【{_cookieStrFactory.CurrentNum}】" : "";
-                                _logger.LogInformation("·开始推送·{task}·{user}", $"{_configuration["RunTasks"]}任务", accountName);
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            //ignore
-                            _logger.LogWarning("异常：{msg}", e);
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError("程序异常终止，原因：{msg}", ex.Message);
-                throw;
-            }
-            finally
-            {
-                if (!isNotifySingle)
-                {
-                    LogAppInfo();
-                    _logger.LogInformation("·开始推送·{task}·{user}", $"{_configuration["RunTasks"]}任务", "");
-                }
-                //环境
-                _logger.LogInformation("运行环境：{env}", _environment.EnvironmentName);
-                _logger.LogInformation("应用目录：{path}{newLine}", _environment.ContentRootPath, Environment.NewLine);
-                _logger.LogInformation("运行结束");
-
-                //自动退出
-                _applicationLifetime.StopApplication();
-            }
+    /// <summary>
+    /// 读取目标任务
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
+    private Task<string[]> ReadTargetTasksAsync(CancellationToken cancellationToken)
+    {
+        string[] tasks = configuration["RunTasks"]!.Split(
+            "&",
+            options: StringSplitOptions.RemoveEmptyEntries
+        );
+        if (tasks.Any())
+        {
+            return Task.FromResult(tasks);
         }
 
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            return Task.CompletedTask;
-        }
+        logger.LogInformation("未指定目标任务，请选择要运行的任务：");
+        TaskTypeFactory.Show(logger);
+        logger.LogInformation("请输入：");
 
-        private Task<bool> PreCheckAsync(CancellationToken cancellationToken)
+        while (true)
         {
-            //Cookie
-            _logger.LogInformation("【账号个数】{count}个{newLine}", _cookieStrFactory.Count, Environment.NewLine);
-
-            //是否跳过
-            if (_securityOptions.IsSkipDailyTask)
+            var index = System.Console.ReadLine();
+            bool suc = int.TryParse(index, out int num);
+            if (suc)
             {
-                _logger.LogWarning("已配置为跳过任务{newLine}", Environment.NewLine);
-                return Task.FromResult(false);
+                string code = TaskTypeFactory.GetCodeByIndex(num);
+                configuration["RunTasks"] = code;
+                return Task.FromResult(new[] { code });
             }
 
-            return Task.FromResult(true);
+            logger.LogWarning("输入异常，请输入序号");
         }
+    }
 
-        private async Task RandomSleepAsync(CancellationToken cancellationToken)
+    private async Task DoTasksAsync(string[] tasks, CancellationToken cancellationToken)
+    {
+        using IServiceScope scope = serviceProvider.CreateScope();
+        foreach (string task in tasks)
         {
-            if (_configuration["RunTasks"].Contains("Login") || _configuration["RunTasks"].Contains("Test")) return;
+            var type = TaskTypeFactory.Get(task);
 
-            if (_securityOptions.RandomSleepMaxMin > 0)
-            {
-                int randomMin = new Random().Next(1, ++_securityOptions.RandomSleepMaxMin);
-                _logger.LogInformation("随机休眠{min}分钟{newLine}", randomMin, Environment.NewLine);
-                await Task.Delay(randomMin * 1000 * 60, cancellationToken);
-            }
+            IAppService appService = (IAppService)scope.ServiceProvider.GetRequiredService(type);
+            await appService.DoTaskAsync(cancellationToken);
         }
+    }
 
-        private Task<string[]> ReadTargetTasksAsync(CancellationToken cancellationToken)
-        {
-            var tasks = _configuration["RunTasks"]
-                .Split("&", options: StringSplitOptions.RemoveEmptyEntries);
-            if (tasks.Any())
-            {
-                return Task.FromResult(tasks);
-            }
-
-            _logger.LogInformation("未指定目标任务，请选择要运行的任务：");
-            TaskTypeFactory.Show(_logger);
-            _logger.LogInformation("请输入：");
-
-            while (true)
-            {
-                var index = System.Console.ReadLine();
-                var suc = int.TryParse(index, out int num);
-                if (suc)
-                {
-                    var code = TaskTypeFactory.GetCodeByIndex(num);
-                    _configuration["RunTasks"] = code;
-                    return Task.FromResult(new string[] { code });
-                }
-
-                _logger.LogWarning("输入异常，请输入序号");
-            }
-        }
-
-        private async Task DoTasksAsync(string[] tasks, CancellationToken cancellationToken)
-        {
-            using var scope = _serviceProvider.CreateScope();
-            foreach (var task in tasks)
-            {
-                var type = TaskTypeFactory.Create(task);
-                if (type == null)
-                {
-                    _logger.LogWarning("任务不存在：{task}", task);
-                    continue;
-                }
-
-                var appService = (IAppService)scope.ServiceProvider.GetRequiredService(type);
-                await appService?.DoTaskAsync(cancellationToken);
-            }
-        }
-
-        private void LogAppInfo()
-        {
-            _logger.LogInformation(
-                "{newLine}========================{newLine} v{version} 开源 by {url}",
-                Environment.NewLine + Environment.NewLine,
-                Environment.NewLine + Environment.NewLine,
-                typeof(Program).Assembly.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion,
-                Constants.SourceCodeUrl + Environment.NewLine
-                );
-            //_logger.LogInformation("【当前IP】{ip} ", IpHelper.GetIp());
-        }
+    private void LogAppInfo()
+    {
+        logger.LogInformation(Environment.NewLine + "========================");
+        logger.LogInformation(
+            "v{version} 开源 by {url}",
+            typeof(Program).Assembly.GetName().Version?.ToString(),
+            Constants.SourceCodeUrl + Environment.NewLine
+        );
+        //_logger.LogInformation("【当前IP】{ip} ", IpHelper.GetIp());
     }
 }

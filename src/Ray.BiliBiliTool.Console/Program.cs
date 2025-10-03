@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Threading.Tasks;
+﻿using System.Reflection;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -14,130 +10,134 @@ using Ray.BiliBiliTool.Infrastructure;
 using Serilog;
 using Serilog.Debugging;
 
-namespace Ray.BiliBiliTool.Console
+namespace Ray.BiliBiliTool.Console;
+
+public class Program
 {
-    public class Program
+    public static async Task<int> Main(string[] args)
     {
-        public static async Task<int> Main(string[] args)
+        System.Console.CancelKeyPress += (sender, eventArgs) =>
         {
-            PrintLogo();
+            eventArgs.Cancel = true;
+            Environment.Exit(0);
+        };
 
-            IHost host = CreateHost(args);
+        PrintLogo();
 
-            try
-            {
-                await host.RunAsync();
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Host terminated unexpectedly!");
-                return 1;
-            }
-            finally
-            {
-                await Log.CloseAndFlushAsync();
-            }
+        IHost host = CreateHost(args);
+
+        try
+        {
+            await host.RunAsync();
+            return 0;
         }
-
-        public static IHost CreateHost(string[] args)
+        catch (Exception ex)
         {
-            IHost host = CreateHostBuilder(args)
-                .UseConsoleLifetime()
-                .Build();
-            Global.ServiceProviderRoot = host.Services;
-            return host;
+            Log.Fatal(ex, "Host terminated unexpectedly!");
+            return 1;
         }
-
-        internal static IHostBuilder CreateHostBuilder(string[] args)
+        finally
         {
-            //IHostBuilder hostBuilder = Host.CreateDefaultBuilder();
-            IHostBuilder hostBuilder = new HostBuilder();
+            await Log.CloseAndFlushAsync();
+        }
+    }
 
-            //hostBuilder.UseContentRoot(Directory.GetCurrentDirectory());
+    public static IHost CreateHost(string[] args)
+    {
+        IHost host = CreateHostBuilder(args).UseConsoleLifetime().Build();
+        Global.ServiceProviderRoot = host.Services;
+        return host;
+    }
 
-            //承载系统自身的配置：
-            hostBuilder.ConfigureHostConfiguration(hostConfigurationBuilder =>
+    private static HostBuilder CreateHostBuilder(string[] args)
+    {
+        //IHostBuilder hostBuilder = Host.CreateDefaultBuilder();
+        var hostBuilder = new HostBuilder();
+
+        //hostBuilder.UseContentRoot(Directory.GetCurrentDirectory());
+
+        hostBuilder.ConfigureHostConfiguration(hostConfigurationBuilder =>
+        {
+            hostConfigurationBuilder.AddEnvironmentVariables(prefix: "DOTNET_");
+
+            if (args is { Length: > 0 })
             {
-                hostConfigurationBuilder.AddEnvironmentVariables(prefix: "DOTNET_");
+                hostConfigurationBuilder.AddCommandLine(args);
+            }
+        });
 
-                if (args is { Length: > 0 })
-                {
-                    hostConfigurationBuilder.AddCommandLine(args);
-                }
-            });
-
-            //应用配置:
-            hostBuilder.ConfigureAppConfiguration((hostBuilderContext, configurationBuilder) =>
+        hostBuilder.ConfigureAppConfiguration(
+            (hostBuilderContext, configurationBuilder) =>
             {
-                Global.HostingEnvironment = hostBuilderContext.HostingEnvironment;
                 IHostEnvironment env = hostBuilderContext.HostingEnvironment;
 
                 //json文件：
-                configurationBuilder.AddJsonFile("appsettings.json", true, true)
-                    .AddJsonFile($"appsettings.{hostBuilderContext.HostingEnvironment.EnvironmentName}.json", true, true)
-                    ;
+                string envName = hostBuilderContext.HostingEnvironment.EnvironmentName;
+                configurationBuilder
+                    .AddJsonFile("appsettings.json", true, true)
+                    .AddJsonFile($"appsettings.{envName}.json", true, true);
 
                 //用户机密：
                 if (env.IsDevelopment() && env.ApplicationName?.Length > 0)
                 {
                     //var appAssembly = Assembly.Load(new AssemblyName(env.ApplicationName));
                     var appAssembly = Assembly.GetAssembly(typeof(Program));
-                    configurationBuilder.AddUserSecrets(appAssembly, optional: true, reloadOnChange: true);
+                    configurationBuilder.AddUserSecrets(
+                        appAssembly!,
+                        optional: true,
+                        reloadOnChange: true
+                    );
                 }
 
                 //环境变量：
-                configurationBuilder.AddExcludeEmptyEnvironmentVariables("QL_", false);
-                configurationBuilder.AddExcludeEmptyEnvironmentVariables("Ray_");
+                configurationBuilder.AddEnvironmentVariables("Ray_");
+                configurationBuilder.AddEnvironmentVariables();
 
                 //命令行：
-                if (args != null && args.Length > 0)
+                if (args is { Length: > 0 })
                 {
-                    configurationBuilder.AddCommandLine(args, Config.Constants.GetCommandLineMappingsDic());
+                    configurationBuilder.AddCommandLine(
+                        args,
+                        Config.Constants.CommandLineMappingsDic
+                    );
                 }
 
                 //本地cookie存储文件
                 configurationBuilder.AddJsonFile("cookies.json", true, true);
+            }
+        );
 
-                //内置配置
-                configurationBuilder.AddInMemoryCollection(Config.Constants.GetExpDic());
-                configurationBuilder.AddInMemoryCollection(Config.Constants.GetDonateCoinCanContinueStatusDic());
-            });
+        SelfLog.Enable(x => System.Console.WriteLine(x ?? ""));
+        hostBuilder.UseSerilog(
+            (context, services, configuration) =>
+                configuration.ReadFrom.Configuration(context.Configuration)
+        );
 
-            //日志:
-            hostBuilder.ConfigureLogging((hostBuilderContext, loggingBuilder) =>
+        hostBuilder.ConfigureServices(
+            (hostContext, services) =>
             {
-                Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(hostBuilderContext.Configuration)
-                .CreateLogger();
-                SelfLog.Enable(x => System.Console.WriteLine(x ?? ""));
-            }).UseSerilog();
-
-            //DI容器:
-            hostBuilder.ConfigureServices((hostContext, services) =>
-            {
-                Global.ConfigurationRoot = (IConfigurationRoot)hostContext.Configuration;
-
                 services.AddHostedService<BiliBiliToolHostedService>();
 
                 services.AddBiliBiliConfigs(hostContext.Configuration);
                 services.AddBiliBiliClientApi(hostContext.Configuration);
                 services.AddDomainServices();
                 services.AddAppServices();
-            });
+            }
+        );
 
-            return hostBuilder;
-        }
+        return hostBuilder;
+    }
 
-        private static void PrintLogo()
-        {
-            System.Console.WriteLine(@"  ____               ____    _   _____           _  ");
-            System.Console.WriteLine(@" |  _ \ __ _ _   _  | __ ) _| |_|_   _|__   ___ | | ");
-            System.Console.WriteLine(@" | |_) / _` | | | | |  _ \(_) (_) | |/ _ \ / _ \| | ");
-            System.Console.WriteLine(@" |  _ < (_| | |_| | | |_) | | | | | | (_) | (_) | | ");
-            System.Console.WriteLine(@" |_| \_\__,_|\__, | |____/|_|_|_| |_|\___/ \___/|_| ");
-            System.Console.WriteLine(@"             |___/                                  ");
-            System.Console.WriteLine();
-        }
+    /// <summary>
+    /// 输出本工具启动logo
+    /// </summary>
+    private static void PrintLogo()
+    {
+        System.Console.WriteLine(@"  ____    _   _____           _  ");
+        System.Console.WriteLine(@" | __ ) _| |_|_   _|__   ___ | | ");
+        System.Console.WriteLine(@" |  _ \(_) (_) | |/ _ \ / _ \| | ");
+        System.Console.WriteLine(@" | |_) | | | | | | (_) | (_) | | ");
+        System.Console.WriteLine(@" |____/|_|_|_| |_|\___/ \___/|_| ");
+        System.Console.WriteLine();
     }
 }

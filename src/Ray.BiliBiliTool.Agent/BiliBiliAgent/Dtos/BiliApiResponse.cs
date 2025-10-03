@@ -1,16 +1,13 @@
-﻿namespace Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos
+﻿namespace Ray.BiliBiliTool.Agent.BiliBiliAgent.Dtos;
+
+public class BiliApiResponse
 {
-    public class BiliApiResponse : BiliApiResponse<object>
-    {
+    public int Code { get; set; } = int.MinValue;
 
-    }
+    public string? Message { get; set; }
+}
 
-    public class BiliApiResponse<TData>
-    {
-        public int Code { get; set; } = int.MinValue;
-
-        public string Message { get; set; }
-
-        public TData Data { get; set; }
-    }
+public class BiliApiResponse<TData> : BiliApiResponse
+{
+    public required TData Data { get; set; }
 }

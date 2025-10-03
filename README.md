@@ -4,7 +4,7 @@
 
 <h1 align="center">
 
-BiliBiliTool
+BiliTool
 
 </h1>
 
@@ -13,17 +13,23 @@ BiliBiliTool
 [![GitHub Issues](https://img.shields.io/github/issues/RayWangQvQ/BiliBiliToolPro?style=flat-square)](https://github.com/RayWangQvQ/BiliBiliToolPro/issues)
 [![GitHub Contributors](https://img.shields.io/github/contributors/RayWangQvQ/BiliBiliToolPro?style=flat-square)](https://github.com/RayWangQvQ/BiliBiliToolPro/graphs/contributors)
 [![GitHub All Releases](https://img.shields.io/github/downloads/RayWangQvQ/BiliBiliToolPro/total?style=flat-square)](https://github.com/RayWangQvQ/BiliBiliToolPro/releases)
-![GitHub Release (latest SemVer)](https://img.shields.io/github/v/release/RayWangQvQ/BiliBiliToolPro?style=flat-square)
+[![GitHub Release (latest SemVer)](https://img.shields.io/github/v/release/RayWangQvQ/BiliBiliToolPro?style=flat-square)](https://github.com/RayWangQvQ/BiliBiliToolPro/releases)
 [![GitHub License](https://img.shields.io/github/license/RayWangQvQ/BiliBiliToolPro?style=flat-square)](https://github.com/RayWangQvQ/BiliBiliToolPro/blob/main/LICENSE)
+
+<a href="https://trendshift.io/repositories/3329" target="_blank">
+    <img src="https://trendshift.io/api/badge/repositories/3329" alt="RayWangQvQ%2FBiliBiliToolPro | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/>
+</a>
 
 </div>
 
-**BiliBiliTool 是一个自动执行任务的工具，当我们忘记做某项任务时，它会像一个贴心小助手，按照我们预先吩咐它的命令，在指定频率、时间范围内帮助我们完成计划的任务。**
+**BiliTool 是一个自动执行任务的工具，当我们忘记做某项任务时，它会像一个贴心小助手，按照我们预先吩咐它的命令，在指定频率、时间范围内帮助我们完成计划的任务。**
 
-详细功能如下：
+**BiliTool is an automated task execution tool that acts as a helpful assistant, following pre-configured commands to complete planned tasks within specified frequencies and timeframes when we forget to do them.**
+
+主要功能如下：
 
 - **扫码登录，自动更新cookie**
-- **每日获取满额升级经验（登录、投币、点赞、分享视频）（支持指定支持up主）**
+- **每日获取满额升级经验（登录、投币、点赞、分享视频）（支持指定up主）**
 - **直播间挂机**
 - **每天漫画签到**
 - **每天直播签到**
@@ -35,20 +41,19 @@ BiliBiliTool
 - **批量取关**
 - **大会员大积分任务**
 - **支持多账号**
-- **理论上支持所有远端的日志推送（默认支持推送到Telegram、企业微信、钉钉、PushPlus、Server酱、钉钉、酷推，另外也支持自定义推送到任意api）**
+- **理论上支持所有远端的日志推送（默认支持推送到Telegram、企业微信、钉钉、PushPlus、Server酱、酷推，另外也支持自定义推送到任意api）**
 ---
 [目录]
 
 <!-- TOC depthFrom:2 -->
 
 - [1. 如何使用](#1-如何使用)
-    - [1.1. 部署 BiliBiliTool](#11-部署-bilibilitool)
-        - [1.1.1. 方式一：青龙（推荐）](#111-方式一青龙推荐)
-        - [1.1.2. 方式二：Docker或Podman容器化运行](#112-方式二docker或podman容器化运行)
-        - [1.1.3. 方式三：下载程序包到本地或服务器运行](#113-方式三下载程序包到本地或服务器运行)
-        - [1.1.4. 方式四：腾讯云函数SCF](#114-方式四腾讯云函数scf)
-        - [1.1.5. 方式五：~~GitHub Actions~~](#115-方式五github-actions)
-        - [1.1.6. 方式六：Chart部署](#116-方式六chart部署)
+    - [1.1. 部署 BiliTool](#11-部署-bilitool)
+        - [1.1.1. 方案一：免费在线容器](#111-方案一免费在线容器)
+        - [1.1.2. 方式二：青龙](#112-方式二青龙)
+        - [1.1.3. 方式三：Docker 或 Podman 运行](#113-方式三docker-或-podman-运行)
+        - [1.1.4. 方式四：下载程序包到本地或服务器运行](#114-方式四下载程序包到本地或服务器运行)
+        - [1.1.5. 方式五：Chart部署](#115-方式五chart部署)
     - [1.2. 消息推送（可选）](#12-消息推送可选)
 - [2. 功能任务说明](#2-功能任务说明)
 - [3. 个性化自定义配置](#3-个性化自定义配置)
@@ -70,51 +75,52 @@ BiliBiliTool
 
 - **本应用仅用于学习和测试，作者本人并不对其负责，请于运行测试完成后自行删除，请勿滥用！**
 - **所有代码都是开源且透明的，任何人均可查看，程序不会保存或滥用任何用户的个人信息**
-- **应用内几乎所有功能都开放为了配置（如任务开关、日期、id等），详细信息可阅读配置文档，请对自己配置负责**
+- **应用内几乎所有功能都开放了配置（如任务开关、日期、id等），详细信息可阅读配置文档**
 
-本地运行图示：
+运行图示：
 
-![运行图示](docs/imgs/run-exe.png)
-
-_（如果图片挂了，请自己架梯子，没有的也可以先参考 [我的博客](https://www.cnblogs.com/RayWang/p/13909784.html)，但内容不保证最新)_
-
+<p align="center">
+    <img src="docs/imgs/web-schedules.png" alt="运行图示" width="800" />
+    <br/>
+    <img src="docs/imgs/web-schedules-log.png" alt="运行日志" width="800" />
+    <br/>
+    <img src="docs/imgs/web-configs.png" alt="运行日志" width="800" />
+    <br/>
+</p>
 
 ## 1. 如何使用
 
-BiliBiliTool 实现自动完成任务的原理，是通过调用一系列开放的api实现的。
+BiliTool 实现自动完成任务的原理，是通过调用一系列开放的api实现的。
 
-**要使用 BiliBiliTool，很简单，按照下面教程部署完成，运行后扫码登录即可。**
+**要使用 BiliTool，很简单，按照下面教程部署完成，运行后扫码登录即可。**
 
-### 1.1. 部署 BiliBiliTool
+### 1.1. 部署 BiliTool
 
 支持多种部署方式，以下选择任一适合自己的方式即可。
 
-#### 1.1.1. 方式一：青龙（推荐）
+#### 1.1.1. 方案一：免费在线容器
+
+有很多平台会提供一定免费额度的在线容器，基于官方镜像，部署 BiliTool 很容易。
+
+以下以 ClawCloud 为例，其他平台操作类似：
+
+[>>ClawCloud 部署教程](docs/claw-cloud.md)
+
+#### 1.1.2. 方式二：青龙
 
 [>>青龙部署教程](qinglong/README.md)
 
-#### 1.1.2. 方式二：Docker或Podman容器化运行
+#### 1.1.3. 方式三：Docker 或 Podman 运行
 
-[>>Docker部署说明](docker/README.md)
+[>>Docker 部署说明](docker/README.md)
 
-[>>Podman部署说明](podman/README.md)
+[>>Podman 部署说明](podman/README.md)
 
-#### 1.1.3. 方式三：下载程序包到本地或服务器运行
+#### 1.1.4. 方式四：下载程序包到本地或服务器运行
 
 [>>本地部署说明](docs/runInLocal.md)
 
-#### 1.1.4. 方式四：腾讯云函数SCF
-
-当前腾讯云函数已改为收费模式，不推荐。
-
-[>>腾讯云函数部署说明](tencentScf/README.md)
-
-
-#### 1.1.5. 方式五：~~GitHub Actions~~
-
-GitHub官方反对并抵制对Actions的滥用，建议所有使用该方式运行的朋友，暂时先替换其他运行方式，避免封号。
-
-#### 1.1.6. 方式六：Chart部署
+#### 1.1.5. 方式五：Chart部署
 
 [>>Chart部署说明](helm/README.md)
 
@@ -122,38 +128,36 @@ GitHub官方反对并抵制对Actions的滥用，建议所有使用该方式运�
 
 如果配置了推送，执行成功后，指定的接收端会收到推送消息，推送效果如下所示：
 
-![微信推送图示](docs/imgs/wechat-push.png)
+<p align="center">
+    <img src="docs/imgs/push-tg.png" alt="Telegram推送图示" width="300">
+</p>
 
-目前默认支持**PushPlus推送、企业微信应用推送、企业微信推送、钉钉推送、Microsoft Teams推送、Telegram推送、Server酱推送和酷推QQ推送**（以上顺序即为个人推荐的排序），如果需要推送到其他端，也可以配置为任意的可以接受消息的Api地址，关于如何配置推送请详见下面的**个性化自定义配置**章节。
+目前默认支持**Telegram推送、PushPlus推送、企业微信应用推送、企业微信推送、钉钉推送、Microsoft Teams推送、Server酱推送和酷推QQ推送**（以上顺序即为个人推荐的排序），如果需要推送到其他端，也可以配置为任意的可以接受消息的Api地址，关于如何配置推送请详见下面的**个性化自定义配置**章节。
+
+推送配置见：[confifuration](/docs/configuration.md)
 
 ## 2. 功能任务说明
-这里的**任务**是指一组功能的集合，是工具每次运行的最小单位。工具启动后会根据我们输入的任务编码，运行相应的任务，如：
 
-```
-dotnet Ray.BiliBiliTool.Console.dll --runTasks=Daily
-```
-
-程序启动后，会执行任务Code为 `Daily` 的`每日经验任务`。
-
-可以通过使用 `&` 符拼接多个任务，程序启动后会按顺序依次执行指定的任务集合，如
-
-```
-dotnet Ray.BiliBiliTool.Console.dll --runTasks=Daily&LiveLottery
-```
-
-会依次运行`每日任务`和`天选抽奖任务`。
+这里的**任务**是指一组功能的集合，是工具每次运行的最小单位。
 
 任务列表如下：
 
-| 任务名 | Code | 功能 | 推荐运行频率 | 备注 |
-| :----: | :----: | :----: | :----: | :----: |
-| 扫码登录 | Login | 试用bili app扫码登录，用于第一次运行时初始化cookie，或cookie过期时的更新。不同平台会将cookie存储到不同地方，青龙存储到环境变量中，其他会存储到cookies.json中 | 手动 | |
-| 每日任务 | Daily | 完成每日任务获取满额65点经验（登录、观看视频、分享视频、投币），以及签到、领福利和充电等附属功能 | 每天一次 | |
-| 天选时刻抽奖 | LiveLottery | 直播中心天选时刻抽奖 | 建议每天运行0-4次 | 对应Actions工作流默认是关闭的，需要添加key为`ISOPENLIVELOTTERYTASK`、值为`true`的secret来手动开启；大部分抽奖都需要关注主播，介意的不要开启 |
-| 批量取关 | UnfollowBatched | 批量取关指定分组下的所有关注（主要用于清理天选抽奖而产生的关注） | 需要时手动运行 | 需要通过配置指定2个参数：`GroupName`（分组名称，如`天选时刻`）和`Count`（目标取关个数，-1表示全部），应用会倒序从后往前取关指定个数 |
-| 大会员大积分 | VipBigPoint | 大会员大积分任务（签到、浏览、观看） | 每天凌晨一点运行 | |
-| 直播间挂机 | LiveFansMedal | 直播间挂机 | 每天一次 | |
-| 测试Cookie | Test | 测试Cookie是否正常 | 需要时手动运行 | 主要用于调试 |
+
+|    任务名     |      Code       |                                                功能                                                 |      推荐运行频率      |
+| :--------: | :-------------: | :-----------------------------------------------------------------------------------------------: | :--------------: |
+|    扫码登录    |      Login      |                   使用app扫码登录，用于第一次运行时初始化cookie，或cookie过期时的更新。不同平台会将cookie存储到不同地方                   |       手动         |
+|    每日任务    |      Daily      |                             完成每日任务获取满额65点经验（登录、观看视频、分享视频、投币），快速升级Lv6                              |       每天一次       |
+|   天选时刻抽奖   |   LiveLottery   |                                  直播中心天选时刻抽奖，大部分抽奖都需要关注主播，介意的不要开启                                  |      每天0-4次      |
+|    批量取关    | UnfollowBatched |                                 批量取关指定分组下的所有关注（主要用于清理天选抽奖而产生的关注）                                  |       手动运行       |
+|   大会员大积分   |   VipBigPoint   |                                        大会员大积分任务（签到、浏览、观看）                                         |    每天一次，建议凌晨     |
+|   直播间挂机    |  LiveFansMedal  |                                               直播间挂机                                               |       每天一次       |
+|    漫画任务    |      Manga      |                                              漫画签到、阅读                                              |       每天一次       |
+| 领取大会员漫画权益  | MangaPrivilege  |                                            领取大会员的漫画权益                                             |       每天一次       |
+|  银瓜子兑换硬币   |   Silver2Coin   |                                             使用银瓜子换取硬币                                             |       每天一次       |
+|  免费B币券充电   |     Charge      |                                 大会员每31天可免费领取一张5B币券，可用于给除自己以外的UP充电                                 |       每天一次       |
+|  领取大会员福利   |  VipPrivilege   |                                              领取大会员福利                                              |       每天一次       |
+|  测试Cookie  |      Test       |                                           测试Cookie是否正常                                            |       手动运行       |
+
 
 ## 3. 个性化自定义配置
 
@@ -200,22 +204,22 @@ dotnet Ray.BiliBiliTool.Console.dll --runTasks=Daily&LiveLottery
 
 当前正处于稳定的迭代开发中，详细待更新和计划内容可参见 [Projects](https://github.com/RayWangQvQ/BiliBiliToolPro/projects) 和 [Issues](https://github.com/RayWangQvQ/BiliBiliToolPro/issues) 。
 
-想要有重要更新时收到通知的话，可以把仓库右上角的`Star`或`Watch`按钮点亮。
+想要有重要更新时收到通知的话，可以把仓库右上角的`Star`按钮点亮。
 
 ## 7. 成为开源贡献成员
 
 ### 7.1. 贡献代码
+
 如果你有好的想法，欢迎向仓库贡献你的代码，贡献步骤：
 
 * 搜索查看 Issue，确定是否已有人提过同类问题
-
 * 对于不确定的主题，为避免code结束后PR不被接受，可以先新建 Issue，描述问题或建议，讨论清楚后再动手编码
-
 * 如果确认自己可以解决，请 Fork 仓库后，在**develop 分支**进行编码开发，完成后**提交 PR 到 develop 分支**
 
 我会尽快进行代码审核，测试成功后会合并入 main 主分支，提前感谢您的贡献。
 
 ### 7.2. 贡献文档
+
 文档部分由于我个人精力有限（写文档比写代码累多了），所以有些地方写的很简略，甚至有遗漏和错别字，不能贡献代码的朋友也欢迎来一起维护文档，欢迎 PR 来纠正我，一样都算是对开源做贡献了。
 
 ## 8. 捐赠支持
@@ -249,9 +253,24 @@ dotnet Ray.BiliBiliTool.Console.dll --runTasks=Daily&LiveLottery
 
 - [JunzhouLiu/BILIBILI-HELPER](https://github.com/JunzhouLiu/BILIBILI-HELPER)
 
-感谢`JetBrain`提供的免费证书支持：
+❤️Thanks to `JetBrains` for the free certificate support:
 
-Thanks to `JetBrain` for the free certificate support:
+<p align="center">
+    <img src="https://resources.jetbrains.com/storage/products/company/brand/logos/ReSharper.svg" alt="ReSharper logo" width="200">
+</p>
 
-![ReSharper logo](https://resources.jetbrains.com/storage/products/company/brand/logos/ReSharper.svg)
+❤️Thanks to [YxVM](https://yxvm.com/aff.php?aff=668) & [NodeSeekDev](https://github.com/NodeSeekDev/NodeSupport) for sponsoring the server for testing support:
 
+<p align="center">
+    <a href="https://yxvm.com/aff.php?aff=668">
+        <img src="docs/imgs/node-support.png" alt="YxVm logo" width="200">
+    </a>
+</p>
+
+❤️Thanks to [DartNode](https://dartnode.com?aff=FriskyGopher833) for sponsoring the server for testing support:
+
+[![Powered by DartNode](https://dartnode.com/branding/DN-Open-Source-sm.png)](https://dartnode.com "Powered by DartNode - Free VPS for Open Source")
+
+❤️Thank you for your star to this project:
+
+[![Star History Chart](https://api.star-history.com/svg?repos=RayWangQvQ/BiliBiliToolPro&type=Date)](https://www.star-history.com/#RayWangQvQ/BiliBiliToolPro&Date)

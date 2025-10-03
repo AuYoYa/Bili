@@ -1,34 +1,24 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
+using Ray.BiliBiliTool.Agent;
 using Ray.BiliBiliTool.Application.Attributes;
 using Ray.BiliBiliTool.Application.Contracts;
 using Ray.BiliBiliTool.DomainService.Interfaces;
+using Ray.BiliBiliTool.Infrastructure.Cookie;
 
-namespace Ray.BiliBiliTool.Application
+namespace Ray.BiliBiliTool.Application;
+
+public class TestAppService(
+    ILogger<TestAppService> logger,
+    IAccountDomainService accountDomainService,
+    CookieStrFactory<BiliCookie> cookieStrFactory
+) : BaseMultiAccountsAppService(logger, cookieStrFactory), ITestAppService
 {
-    public class TestAppService : AppService, ITestAppService
+    [TaskInterceptor("测试Cookie")]
+    protected override async Task DoTaskAccountAsync(
+        BiliCookie ck,
+        CancellationToken cancellationToken = default
+    )
     {
-        private readonly ILogger<LiveLotteryTaskAppService> _logger;
-        private readonly IConfiguration _configuration;
-        private readonly IAccountDomainService _accountDomainService;
-
-        public TestAppService(
-            IConfiguration configuration,
-            ILogger<LiveLotteryTaskAppService> logger,
-            IAccountDomainService accountDomainService
-            )
-        {
-            _configuration = configuration;
-            _logger = logger;
-            _accountDomainService = accountDomainService;
-        }
-
-        [TaskInterceptor("测试Cookie")]
-        public override async Task DoTaskAsync(CancellationToken cancellationToken)
-        {
-            await _accountDomainService.LoginByCookie();
-        }
+        await accountDomainService.LoginByCookie(ck);
     }
 }

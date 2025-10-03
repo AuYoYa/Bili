@@ -3,12 +3,12 @@ set -e
 set -u
 set -o pipefail
 
-echo '  ____               ____    _   _____           _  '
-echo ' |  _ \ __ _ _   _  | __ ) _| |_|_   _|__   ___ | | '
-echo ' | |_) / _` | | | | |  _ \(_) (_) | |/ _ \ / _ \| | '
-echo ' |  _ < (_| | |_| | | |_) | | | | | | (_) | (_) | | '
-echo ' |_| \_\__,_|\__, | |____/|_|_|_| |_|\___/ \___/|_| '
-echo '             |___/                                  '
+echo '  ____    _   _____           _  '
+echo ' | __ ) _| |_|_   _|__   ___ | | '
+echo ' |  _ \(_) (_) | |/ _ \ / _ \| | '
+echo ' | |_) | | | | | | (_) | (_) | | '
+echo ' |____/|_|_|_| |_|\___/ \___/|_| '
+echo ''
 
 # ------------vars-----------
 repoDir=$(dirname $PWD)
@@ -47,6 +47,23 @@ read_var_from_user() {
 get_version() {
     version=$(grep -oP '(?<=<Version>).*?(?=<\/Version>)' $repoDir/common.props)
     echo -e "current version: $version \n\n"
+
+    mkdir -p $publishDir
+
+    # 将版本号保存到文件
+    echo "$version" > "$publishDir/version.txt"
+
+    echo "Version saved to $publishDir/version.txt"
+}
+
+extract_release_notes() {
+    echo "Extracting release notes from CHANGELOG.md..."
+    mkdir -p $publishDir
+
+    # 提取最新的 changelog (从第一个 ## 标题到下一个 ## 标题之间的所有内容)
+    sed -n '/^## /{p;:a;n;/^## /q;p;ba}' "$repoDir/CHANGELOG.md" > "$publishDir/release_notes.md"
+
+    echo "Release notes saved to $publishDir/release_notes.md"
 }
 
 publish_dotnet_dependent() {
@@ -62,10 +79,9 @@ publish_dotnet_dependent() {
     dotnet publish --configuration Release \
         --self-contained false \
         -p:PublishSingleFile=true \
+        -p:DebugType=None \
+        -p:DebugSymbols=false \
         -o $outputDir
-
-    echo "clear pdb files"
-    rm -rf $outputDir/*.pdb
 
     echo "zip files..."
     cd $publishDir
@@ -88,12 +104,10 @@ publish_self_contained() {
     dotnet publish --configuration Release \
         --self-contained true \
         --runtime $runtime \
-        -p:PublishTrimmed=true \
         -p:PublishSingleFile=true \
+        -p:DebugType=None \
+        -p:DebugSymbols=false \
         -o $outputDir
-
-    echo "clear pdb files"
-    rm -rf $outputDir/*.pdb
 
     echo "zip files..."
     cd $publishDir
@@ -118,13 +132,14 @@ main() {
     read_var_from_user
 
     get_version
+    extract_release_notes
 
     # dotnet dependent
     publish_dotnet_dependent
 
     # self contained
     # https://learn.microsoft.com/zh-cn/dotnet/core/rid-catalog
-    array=("win-x86" "win-x64" "win-arm64" "linux-x64" "linux-musl-x64" "linux-arm64" "linux-arm" "osx-x64")
+    array=("win-x86" "win-x64" "win-arm64" "linux-x64" "linux-musl-x64" "linux-arm64" "linux-arm" "linux-musl-arm64" "osx-x64")
     if [ "$runTime" != "all" ]; then
         array=("$runTime")
     fi
