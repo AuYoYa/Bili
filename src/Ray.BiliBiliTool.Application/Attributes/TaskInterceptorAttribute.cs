@@ -15,6 +15,7 @@ public class TaskInterceptorAttribute(
     private readonly ILogger _logger = Global.ServiceProviderRoot!
         .GetRequiredService<ILogger<TaskInterceptorAttribute>>();
 
+    // 修复：使用构造函数参数
     private readonly bool _rethrowWhenException = rethrowWhenException;
 
     public override void OnEntry(MethodContext context)
@@ -23,11 +24,9 @@ public class TaskInterceptorAttribute(
             return;
 
         var delimiter = GetDelimiters();
-        var end = taskLevel == TaskLevel.One ? Environment.NewLine : "";
+        string end = taskLevel == TaskLevel.One ? Environment.NewLine : "";
 
-        _logger.LogInformation(
-            $"{delimiter}开始 {taskName} {delimiter}{end}"
-        );
+        _logger.LogInformation($"{delimiter}开始 {taskName} {delimiter}{end}");
     }
 
     public override void OnExit(MethodContext context)
@@ -38,9 +37,7 @@ public class TaskInterceptorAttribute(
         string delimiter = GetDelimiters();
         string append = new string(GetDelimiter(), taskName.Length);
 
-        _logger.LogInformation(
-            $"{delimiter}{append}结束{append}{delimiter}{Environment.NewLine}"
-        );
+        _logger.LogInformation($"{delimiter}{append}结束{append}{delimiter}{Environment.NewLine}");
     }
 
     public override void OnException(MethodContext context)
@@ -56,12 +53,8 @@ public class TaskInterceptorAttribute(
                 Environment.NewLine
             );
         }
-        else
-        {
-            _logger.LogError("任务异常：{msg}", ex.Message);
-        }
 
-        // 关键修复：returnValue 不能为 null
+        // 修复：避免 null returnValue 警告
         context.HandledException(this, ex);
 
         if (_rethrowWhenException)
