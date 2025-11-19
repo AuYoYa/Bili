@@ -80,39 +80,3 @@ public class TaskInterceptorAttribute(
         };
     }
 }
-    public override void OnException(MethodContext context)
-    {
-        if (rethrowWhenException)
-        {
-            _logger.LogError("程序发生异常：{msg}", context.Exception?.Message ?? "");
-            base.OnException(context);
-            return;
-        }
-
-        _logger.LogError(
-            "{task}失败，继续其他任务。失败信息:{msg}" + Environment.NewLine,
-            taskName,
-            context.Exception?.Message ?? ""
-        );
-        context.HandledException(this, null);
-    }
-
-    private string GetDelimiters()
-    {
-        char delimiter = GetDelimiter();
-
-        int count = Convert.ToInt32(taskLevel.DefaultValue());
-        return new string(delimiter, count);
-    }
-
-    private char GetDelimiter()
-    {
-        return taskLevel switch
-        {
-            TaskLevel.One => '=',
-            TaskLevel.Two => '-',
-            TaskLevel.Three => '-',
-            _ => throw new ArgumentOutOfRangeException(nameof(taskLevel), taskLevel, null),
-        };
-    }
-}
