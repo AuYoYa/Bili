@@ -9,8 +9,7 @@ public class TaskInfo
     public List<ModuleItem> Modules { get; set; } = [];
 
     /// <summary>
-    /// ⚠ The sign result comes from combine API is not correct,
-    /// use IVipBigPointApi.GetThreeDaySignAsync instead.
+    /// ⚠ combine 接口返回的签到数据不准确，请使用 IVipBigPointApi.GetThreeDaySignAsync
     /// </summary>
     public required SingTaskItem Sing_task_item { get; set; }
 }
@@ -51,4 +50,18 @@ public class CommonTaskItem
 
     public int complete_times { get; set; }
 
-    public int max_times { get; set;
+    public int max_times { get; set; }
+
+    public int recall_num { get; set; }
+}
+
+public class Histtory
+{
+    public DateTime Day { get; set; }
+
+    public bool Signed { get; set; }
+
+    public int Score { get; set; }
+
+    public bool Is_today { get; set; }
+}
