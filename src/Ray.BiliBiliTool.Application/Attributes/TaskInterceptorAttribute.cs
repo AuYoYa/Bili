@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Ray.BiliBiliTool.Infrastructure;
 using Rougamo;
@@ -23,6 +23,7 @@ public class TaskInterceptorAttribute(
     {
         if (taskName == null)
             return;
+
         string end = taskLevel == TaskLevel.One ? Environment.NewLine : "";
         string delimiter = GetDelimiters();
         _logger.LogInformation(delimiter + "开始 {taskName} " + delimiter + end, taskName);
@@ -41,6 +42,44 @@ public class TaskInterceptorAttribute(
         );
     }
 
+    public override void OnException(MethodContext context)
+    {
+        if (taskName == null)
+        {
+            // 即使 taskName 为 null，也应该正常记录异常
+            _logger.LogError("任务异常：{msg}", context.Exception?.Message ?? "");
+            context.HandledException(this, context.Exception);
+            return;
+        }
+
+        _logger.LogError(
+            "{task}失败，继续其他任务。失败信息:{msg}" + Environment.NewLine,
+            taskName,
+            context.Exception?.Message ?? ""
+        );
+
+        // 修复 CS8625：Rougamo 要求传入 Exception，不可为 null
+        context.HandledException(this, context.Exception);
+    }
+
+    private string GetDelimiters()
+    {
+        char delimiter = GetDelimiter();
+        int count = Convert.ToInt32(taskLevel.DefaultValue());
+        return new string(delimiter, count);
+    }
+
+    private char GetDelimiter()
+    {
+        return taskLevel switch
+        {
+            TaskLevel.One => '=',
+            TaskLevel.Two => '-',
+            TaskLevel.Three => '*',
+            _ => '-'
+        };
+    }
+}
     public override void OnException(MethodContext context)
     {
         if (rethrowWhenException)
