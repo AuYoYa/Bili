@@ -6,67 +6,74 @@ using Rougamo.Context;
 
 namespace Ray.BiliBiliTool.Application.Attributes;
 
-/// <summary>
-/// 任务拦截器
-/// </summary>
 public class TaskInterceptorAttribute(
     string? taskName = null,
     TaskLevel taskLevel = TaskLevel.Two,
     bool rethrowWhenException = true
 ) : MoAttribute
 {
-    private readonly ILogger _logger = Global.ServiceProviderRoot!.GetRequiredService<
-        ILogger<TaskInterceptorAttribute>
-    >();
+    private readonly ILogger _logger = Global.ServiceProviderRoot!
+        .GetRequiredService<ILogger<TaskInterceptorAttribute>>();
+
+    private readonly bool _rethrowWhenException = rethrowWhenException;
 
     public override void OnEntry(MethodContext context)
     {
-        if (taskName == null)
+        if (taskName is null)
             return;
 
-        string end = taskLevel == TaskLevel.One ? Environment.NewLine : "";
-        string delimiter = GetDelimiters();
-        _logger.LogInformation(delimiter + "开始 {taskName} " + delimiter + end, taskName);
+        var delimiter = GetDelimiters();
+        var end = taskLevel == TaskLevel.One ? Environment.NewLine : "";
+
+        _logger.LogInformation(
+            $"{delimiter}开始 {taskName} {delimiter}{end}"
+        );
     }
 
     public override void OnExit(MethodContext context)
     {
-        if (taskName == null)
+        if (taskName is null)
             return;
 
         string delimiter = GetDelimiters();
-        var append = new string(GetDelimiter(), taskName.Length);
+        string append = new string(GetDelimiter(), taskName.Length);
 
         _logger.LogInformation(
-            delimiter + append + "结束" + append + delimiter + Environment.NewLine
+            $"{delimiter}{append}结束{append}{delimiter}{Environment.NewLine}"
         );
     }
 
     public override void OnException(MethodContext context)
     {
-        if (taskName == null)
+        var ex = context.Exception ?? new Exception("Unknown exception");
+
+        if (taskName is not null)
         {
-            // 即使 taskName 为 null，也应该正常记录异常
-            _logger.LogError("任务异常：{msg}", context.Exception?.Message ?? "");
-            context.HandledException(this, context.Exception);
-            return;
+            _logger.LogError(
+                "{task}失败，继续其他任务。失败信息:{msg}{nl}",
+                taskName,
+                ex.Message,
+                Environment.NewLine
+            );
+        }
+        else
+        {
+            _logger.LogError("任务异常：{msg}", ex.Message);
         }
 
-        _logger.LogError(
-            "{task}失败，继续其他任务。失败信息:{msg}" + Environment.NewLine,
-            taskName,
-            context.Exception?.Message ?? ""
-        );
+        // 关键修复：returnValue 不能为 null
+        context.HandledException(this, ex);
 
-        // 修复 CS8625：Rougamo 要求传入 Exception，不可为 null
-        context.HandledException(this, context.Exception);
+        if (_rethrowWhenException)
+        {
+            throw ex;
+        }
     }
 
     private string GetDelimiters()
     {
-        char delimiter = GetDelimiter();
         int count = Convert.ToInt32(taskLevel.DefaultValue());
-        return new string(delimiter, count);
+        return new string(GetDelimiter(), count);
     }
 
     private char GetDelimiter()
